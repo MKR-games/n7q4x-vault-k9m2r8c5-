@@ -1,28 +1,30 @@
 # 강도윤의 휴대전화
 
 4인용 공포 머더 미스터리를 위한 강도윤 캐릭터 휴대전화 프로토타입입니다.
-GitHub Pages에서 바로 실행할 수 있도록 정적 웹앱으로 구성되어 있습니다.
+이 패키지는 GitHub Actions나 별도 서버 없이 GitHub Pages에서 실행됩니다.
 
-## GitHub에 올리는 방법
+## 가장 간단한 배포 방법
 
-1. 이 ZIP의 압축을 풉니다.
-2. GitHub에서 새 저장소를 만들고 기본 브랜치를 `main`으로 설정합니다.
-3. **압축을 푼 폴더 안의 파일 전체**를 저장소 최상단에 업로드합니다.
-   - `package.json`, `index.html`, `src`, `public`, `.github`가 저장소 첫 화면에 보여야 합니다.
-   - ZIP 파일 자체나 바깥쪽 폴더 하나만 올리면 실행되지 않습니다.
-4. 저장소의 **Settings → Pages**로 이동합니다.
-5. **Build and deployment → Source**를 `GitHub Actions`로 선택합니다.
-6. 저장소의 **Actions** 탭에서 `GitHub Pages 배포`가 완료될 때까지 기다립니다.
-7. 완료 후 Pages 화면에 표시되는 주소를 엽니다.
-
-주소 형식은 일반적으로 다음과 같습니다.
+1. ZIP 압축을 풉니다.
+2. 압축을 푼 폴더 안의 파일과 폴더를 GitHub 저장소 최상단에 모두 업로드합니다.
+3. 저장소 첫 화면에 `docs`, `public`, `src`, `README.md`가 보이는지 확인합니다.
+4. GitHub 저장소의 **Settings → Pages**로 이동합니다.
+5. **Build and deployment → Source**를 `Deploy from a branch`로 선택합니다.
+6. Branch는 `main`, 폴더는 `/docs`로 선택하고 **Save**를 누릅니다.
+7. 배포가 끝나면 아래 주소로 접속합니다.
 
 ```text
 https://내아이디.github.io/저장소이름/
 ```
 
-저장소가 비공개라면 GitHub 요금제에 따라 Pages 사용이 제한될 수 있습니다.
-처음 테스트할 때는 공개 저장소가 가장 간단합니다.
+현재 저장소를 그대로 사용할 경우 주소는 다음과 같습니다.
+
+```text
+https://mkr-games.github.io/n7q4x-vault-k9m2r8c5-/
+```
+
+중요: `GitHub Actions`가 아니라 `Deploy from a branch → main → /docs`를
+선택해야 합니다. `docs` 폴더에는 이미 빌드가 끝난 실행 파일이 들어 있습니다.
 
 ## 컴퓨터에서 먼저 실행하기
 
