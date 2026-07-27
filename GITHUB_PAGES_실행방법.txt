@@ -1,0 +1,19 @@
+강도윤 휴대전화 프로토타입 — GitHub Pages 실행 방법
+
+1. 이 ZIP의 압축을 풉니다.
+2. 압축을 푼 폴더 안의 모든 파일과 폴더를 GitHub 저장소에 업로드합니다.
+   특히 docs 폴더를 통째로 업로드해야 합니다.
+3. 저장소의 Settings → Pages로 이동합니다.
+4. Build and deployment에서 다음과 같이 선택합니다.
+   Source: Deploy from a branch
+   Branch: main
+   Folder: /docs
+5. Save를 누르고 배포가 끝날 때까지 기다린 뒤 Pages 주소를 엽니다.
+
+로컬 확인
+- docs/index.html 파일을 직접 열어도 실행됩니다.
+- 잠금 화면에서 위로 밀거나, 화면 또는 아래쪽 잠금 해제 영역을 누르면 열립니다.
+
+주의
+- 저장소 루트의 개발용 파일이 아니라 docs/index.html이 배포 대상입니다.
+- docs/assets 폴더 안의 사진 및 스크립트 파일 이름을 바꾸지 마세요.
