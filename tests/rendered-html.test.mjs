@@ -29,5 +29,8 @@ test("renders development preview metadata", async () => {
     response.headers.get("content-type") ?? "",
     /^text\/html\b/i,
   );
-  assert.match(await response.text(), developmentPreviewMeta);
+  const html = await response.text();
+  assert.match(html, developmentPreviewMeta);
+  assert.match(html, /강도윤의 휴대전화/);
+  assert.doesNotMatch(html, /Starter Project|해원고등학교/);
 });
