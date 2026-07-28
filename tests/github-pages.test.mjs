@@ -75,8 +75,15 @@ test("built app keeps character identity and removes obsolete school name", asyn
   assert.match(script, /10월 13일 일요일/);
   assert.match(script, /ENC_VIDEO_1013\.bin/);
   assert.match(script, /차단기 확인이라고 말하기/);
+  assert.match(script, /그 애가 태어난 날\. 월과 일을 네 자리로\./);
+  assert.match(script, /지워진 말은 사라져도, 사건의 음성은 번호 끝에 남는다\./);
+  assert.match(script, /이 휴대전화 주인이 태어난 날\. 월과 일을 네 자리로\./);
+  assert.match(script, /옥상에서 떨어진 학생의 이름\. 영문 대문자로\./);
+  assert.match(script, /찢어진 점검표 속 장치번호를 숫자 네 자리로\./);
+  assert.match(script, /암호 힌트/);
   assert.match(styles, /\.app-icon-shell\{[^}]*overflow:visible/);
   assert.match(styles, /\.app-icon\{[^}]*overflow:hidden/);
+  assert.match(styles, /\.unlock-hint\{/);
   assert.doesNotMatch(script, /"\/assets\//);
   assert.ok(
     (await stat(path.join(docsRoot, "assets", "nari-final-evidence.mp4"))).size >
