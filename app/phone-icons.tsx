@@ -13,6 +13,8 @@ export type AppGlyphName =
 export type UiIconName =
   | "back"
   | "backspace"
+  | "battery"
+  | "bluetooth"
   | "camera"
   | "check"
   | "chevronLeft"
@@ -20,6 +22,7 @@ export type UiIconName =
   | "close"
   | "edit"
   | "flash"
+  | "fullscreen"
   | "hangup"
   | "heart"
   | "info"
@@ -69,6 +72,21 @@ export function UiIcon({ className, name, size = 24 }: IconProps) {
           <path d="m12 9.2 5.2 5.6m0-5.6L12 14.8" stroke="currentColor" strokeLinecap="round" strokeWidth="1.6" />
         </svg>
       );
+    case "battery":
+      return (
+        <svg {...shared} fill="none">
+          <rect x="3.5" y="7.2" width="16" height="9.6" rx="2.3" stroke="currentColor" strokeWidth="1.7" />
+          <path d="M20.4 10.2v3.6" stroke="currentColor" strokeLinecap="round" strokeWidth="1.7" />
+          <rect x="6.2" y="9.6" width="9.4" height="4.8" rx="1.2" fill="currentColor" />
+        </svg>
+      );
+    case "bluetooth":
+      return (
+        <svg {...shared} fill="none">
+          <path d="m12 3.5 5 4.3-5 4.2 5 4.2-5 4.3v-17Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.7" />
+          <path d="m7 7.2 10 9M7 16.8l10-9" stroke="currentColor" strokeLinecap="round" strokeWidth="1.7" />
+        </svg>
+      );
     case "camera":
       return (
         <svg {...shared} fill="none">
@@ -111,6 +129,12 @@ export function UiIcon({ className, name, size = 24 }: IconProps) {
       return (
         <svg {...shared} fill="none">
           <path d="M13.4 2.8 6.8 13h5l-1.2 8.2L17.2 11h-5l1.2-8.2Z" fill="currentColor" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.2" />
+        </svg>
+      );
+    case "fullscreen":
+      return (
+        <svg {...shared} fill="none">
+          <path d="M4.5 9V4.5H9M15 4.5h4.5V9M19.5 15v4.5H15M9 19.5H4.5V15" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
         </svg>
       );
     case "hangup":

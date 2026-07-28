@@ -26,14 +26,23 @@ type Screen =
   | "files"
   | "recorder"
   | "notes"
+  | "note"
   | "calendar"
   | "contacts"
   | "guide"
   | "settings";
 
 type UnlockKey = "gallery" | "messages" | "voice" | "file" | "device";
+type GuideFontSize = "small" | "medium" | "large";
 
 type UnlockState = Record<UnlockKey, boolean>;
+
+type PhoneActivity = {
+  missedCalls: number;
+  unreadMessages: Record<string, number>;
+  unseenFiles: number;
+  unseenRecordings: number;
+};
 
 const initialUnlocks: UnlockState = {
   gallery: false,
@@ -75,7 +84,7 @@ const unlockConfig: Record<
 };
 
 const apps = [
-  { id: "messages", label: "메시지", icon: "messages", badge: 3 },
+  { id: "messages", label: "메시지", icon: "messages" },
   { id: "phone", label: "전화", icon: "phone" },
   { id: "gallery", label: "갤러리", icon: "gallery" },
   { id: "files", label: "내 파일", icon: "files" },
@@ -157,6 +166,62 @@ const threads = [
   },
 ];
 
+const initialActivity: PhoneActivity = {
+  missedCalls: 1,
+  unreadMessages: Object.fromEntries(
+    threads.map((thread) => [thread.name, thread.unread]),
+  ),
+  unseenFiles: 1,
+  unseenRecordings: 1,
+};
+
+type NoteItem = {
+  body: string[];
+  date: string;
+  id: string;
+  preview: string;
+  title: string;
+  tone?: "important" | "dark";
+  updated: string;
+};
+
+const notes: NoteItem[] = [
+  {
+    id: "today",
+    date: "10월 12일",
+    updated: "10월 12일 오후 11:34",
+    title: "오늘",
+    preview: "불이 꺼졌을 때 복도로 나갔다고 말할 것.",
+    body: [
+      "불이 꺼졌을 때 복도로 나갔다고 말할 것.",
+      "차단기를 확인하러 갔다고 설명할 것.",
+      "먼저 다른 이야기를 꺼내지 않는다.",
+    ],
+    tone: "important",
+  },
+  {
+    id: "student-council",
+    date: "10월 9일",
+    updated: "10월 9일 오후 6:12",
+    title: "학생회",
+    preview: "회의록 정리, 축제 예산 확인, 방송부 장비 반납.",
+    body: [
+      "회의록 정리",
+      "축제 예산 확인",
+      "방송부 장비 반납",
+    ],
+  },
+  {
+    id: "seoa",
+    date: "9월 28일",
+    updated: "9월 28일 오후 10:41",
+    title: "서아",
+    preview: "영상이 정말 남아 있는지 확인해야 한다.",
+    body: ["영상이 정말 남아 있는지 확인해야 한다."],
+    tone: "dark",
+  },
+];
+
 function speak(text: string) {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
   window.speechSynthesis.cancel();
@@ -199,6 +264,35 @@ function loadUnlocks(): UnlockState {
   }
 }
 
+function loadActivity(): PhoneActivity {
+  if (typeof window === "undefined") return initialActivity;
+  try {
+    const saved = window.localStorage.getItem("doyoon-phone-activity");
+    if (!saved) return initialActivity;
+    const parsed = JSON.parse(saved) as Partial<PhoneActivity>;
+    return {
+      ...initialActivity,
+      ...parsed,
+      unreadMessages: {
+        ...initialActivity.unreadMessages,
+        ...(parsed.unreadMessages ?? {}),
+      },
+    };
+  } catch {
+    return initialActivity;
+  }
+}
+
+function loadGuideFontSize(): GuideFontSize {
+  if (typeof window === "undefined") return "medium";
+  try {
+    const saved = window.localStorage.getItem("doyoon-guide-font-size");
+    return saved === "small" || saved === "large" ? saved : "medium";
+  } catch {
+    return "medium";
+  }
+}
+
 export default function Home() {
   const [entered, setEntered] = useState(false);
   const [screen, setScreen] = useState<Screen>("lock");
@@ -225,6 +319,11 @@ export default function Home() {
   const [viewerScale, setViewerScale] = useState(1);
   const [viewerPan, setViewerPan] = useState({ x: 0, y: 0 });
   const [viewerDetails, setViewerDetails] = useState(false);
+  const [activity, setActivity] = useState<PhoneActivity>(initialActivity);
+  const [messageQuery, setMessageQuery] = useState("");
+  const [selectedNoteId, setSelectedNoteId] = useState(notes[0].id);
+  const [guideFontSize, setGuideFontSize] =
+    useState<GuideFontSize>("medium");
   const unlockTargetRef = useRef<UnlockKey | null>(null);
   const callOpenRef = useRef(false);
   const imageOpenRef = useRef(false);
@@ -246,6 +345,14 @@ export default function Home() {
     imageOpenRef.current = Boolean(selectedImageId);
     viewerDetailsRef.current = viewerDetails;
   }, [unlockTarget, call, selectedImageId, viewerDetails]);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      setActivity(loadActivity());
+      setGuideFontSize(loadGuideFontSize());
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   useEffect(() => {
     const guardState = { characterPhone: true };
@@ -331,6 +438,50 @@ export default function Home() {
     speak(call.transcript);
   }, [call]);
 
+  const persistActivity = (
+    update: (current: PhoneActivity) => PhoneActivity,
+  ) => {
+    setActivity((current) => {
+      const next = update(current);
+      try {
+        window.localStorage.setItem(
+          "doyoon-phone-activity",
+          JSON.stringify(next),
+        );
+      } catch {
+        // The phone remains usable when private browsing blocks storage.
+      }
+      return next;
+    });
+  };
+
+  const markThreadRead = (threadName: string) => {
+    persistActivity((current) => ({
+      ...current,
+      unreadMessages: {
+        ...current.unreadMessages,
+        [threadName]: 0,
+      },
+    }));
+  };
+
+  const changePhoneTab = (nextTab: "keypad" | "recent" | "contacts") => {
+    setPhoneTab(nextTab);
+    if (nextTab === "recent" && activity.missedCalls > 0) {
+      persistActivity((current) => ({ ...current, missedCalls: 0 }));
+    }
+  };
+
+  const changeGuideFontSize = (nextSize: GuideFontSize) => {
+    setGuideFontSize(nextSize);
+    try {
+      window.localStorage.setItem("doyoon-guide-font-size", nextSize);
+    } catch {
+      // The selected size still applies for the current play session.
+    }
+    vibrate(6);
+  };
+
   const navigateTo = (next: Screen) => {
     if (screenStack.current.at(-1) !== next) {
       screenStack.current.push(next);
@@ -408,6 +559,37 @@ export default function Home() {
   };
 
   const statusTime = useMemo(() => (screen === "lock" ? "23:47" : "23:48"), [screen]);
+  const unreadMessageCount = useMemo(
+    () =>
+      Object.values(activity.unreadMessages).reduce(
+        (total, count) => total + count,
+        0,
+      ),
+    [activity.unreadMessages],
+  );
+  const filteredThreads = useMemo(() => {
+    const query = messageQuery.trim().toLocaleLowerCase("ko-KR");
+    if (!query) return threads;
+    return threads.filter((thread) =>
+      `${thread.name} ${thread.preview}`
+        .toLocaleLowerCase("ko-KR")
+        .includes(query),
+    );
+  }, [messageQuery]);
+  const latestUnreadThread =
+    threads.find((thread) => (activity.unreadMessages[thread.name] ?? 0) > 0) ??
+    null;
+  const selectedNote =
+    notes.find((note) => note.id === selectedNoteId) ?? notes[0]!;
+
+  const getAppBadge = (appId: string) => {
+    if (appId === "messages") return unreadMessageCount;
+    if (appId === "phone") return activity.missedCalls;
+    if (appId === "files") return activity.unseenFiles;
+    if (appId === "recorder") return activity.unseenRecordings;
+    return 0;
+  };
+
   const visibleGalleryImages = useMemo(
     () => galleryImages.filter((image) => !image.hidden || unlocks.gallery),
     [unlocks.gallery],
@@ -580,6 +762,12 @@ export default function Home() {
   };
 
   const openApp = (id: string) => {
+    if (id === "files" && activity.unseenFiles > 0) {
+      persistActivity((current) => ({ ...current, unseenFiles: 0 }));
+    }
+    if (id === "recorder" && activity.unseenRecordings > 0) {
+      persistActivity((current) => ({ ...current, unseenRecordings: 0 }));
+    }
     navigateTo(id as Screen);
     vibrate();
   };
@@ -650,16 +838,42 @@ export default function Home() {
 
   const renderMessages = () => (
     <section className="app-surface messages-app">
-      {renderHeader("메시지", "읽지 않은 메시지 3개")}
-      <div className="search-pill">대화 검색</div>
+      {renderHeader(
+        "메시지",
+        unreadMessageCount > 0
+          ? `읽지 않은 메시지 ${unreadMessageCount}개`
+          : "모든 메시지를 읽었습니다",
+      )}
+      <label className="message-search">
+        <UiIcon name="search" size={17} />
+        <input
+          type="search"
+          value={messageQuery}
+          onChange={(event) => setMessageQuery(event.target.value)}
+          placeholder="대화 검색"
+          aria-label="대화 검색"
+        />
+        {messageQuery ? (
+          <button
+            type="button"
+            onClick={() => setMessageQuery("")}
+            aria-label="검색어 지우기"
+          >
+            <UiIcon name="close" size={15} />
+          </button>
+        ) : null}
+      </label>
       <div className="thread-list">
-        {threads.map((thread) => (
+        {filteredThreads.map((thread) => {
+          const unread = activity.unreadMessages[thread.name] ?? 0;
+          return (
           <button
             className="thread-row"
             key={thread.name}
             type="button"
             onClick={() => {
               setSelectedThread(thread.name);
+              markThreadRead(thread.name);
               navigateTo("thread");
             }}
           >
@@ -671,9 +885,13 @@ export default function Home() {
               </span>
               <span>{thread.preview}</span>
             </span>
-            {thread.unread ? <b className="unread-dot">{thread.unread}</b> : null}
+            {unread ? <b className="unread-dot">{unread}</b> : null}
           </button>
-        ))}
+          );
+        })}
+        {filteredThreads.length === 0 ? (
+          <p className="message-empty">일치하는 대화가 없습니다.</p>
+        ) : null}
       </div>
     </section>
   );
@@ -790,21 +1008,24 @@ export default function Home() {
         <button
           type="button"
           className={phoneTab === "keypad" ? "active" : ""}
-          onClick={() => setPhoneTab("keypad")}
+          onClick={() => changePhoneTab("keypad")}
         >
           키패드
         </button>
         <button
           type="button"
           className={phoneTab === "recent" ? "active" : ""}
-          onClick={() => setPhoneTab("recent")}
+          onClick={() => changePhoneTab("recent")}
         >
           최근기록
+          {activity.missedCalls > 0 ? (
+            <b className="tab-badge">{activity.missedCalls}</b>
+          ) : null}
         </button>
         <button
           type="button"
           className={phoneTab === "contacts" ? "active" : ""}
-          onClick={() => setPhoneTab("contacts")}
+          onClick={() => changePhoneTab("contacts")}
         >
           연락처
         </button>
@@ -1116,21 +1337,23 @@ export default function Home() {
     <section className="app-surface notes-app">
       {renderHeader("메모", "최근 수정 순")}
       <div className="note-grid">
-        <article className="note-card important">
-          <small>10월 12일</small>
-          <strong>오늘</strong>
-          <p>불이 꺼졌을 때 복도로 나갔다고 말할 것.</p>
-        </article>
-        <article className="note-card">
-          <small>10월 9일</small>
-          <strong>학생회</strong>
-          <p>회의록 정리, 축제 예산 확인, 방송부 장비 반납.</p>
-        </article>
-        <article className="note-card dark">
-          <small>9월 28일</small>
-          <strong>서아</strong>
-          <p>영상이 정말 남아 있는지 확인해야 한다.</p>
-        </article>
+        {notes.map((note) => (
+          <button
+            type="button"
+            key={note.id}
+            className={`note-card ${note.tone ?? ""}`}
+            onClick={() => {
+              setSelectedNoteId(note.id);
+              navigateTo("note");
+              vibrate(7);
+            }}
+            aria-label={`${note.title} 메모 열기`}
+          >
+            <small>{note.date}</small>
+            <strong>{note.title}</strong>
+            <p>{note.preview}</p>
+          </button>
+        ))}
       </div>
       <button
         type="button"
@@ -1140,6 +1363,29 @@ export default function Home() {
       >
         ＋
       </button>
+    </section>
+  );
+
+  const renderNote = () => (
+    <section className={`app-surface note-detail-app ${selectedNote.tone ?? ""}`}>
+      {renderHeader(selectedNote.title, selectedNote.updated)}
+      <article className="note-document">
+        <time>{selectedNote.updated}</time>
+        <div>
+          {selectedNote.body.map((paragraph, index) => (
+            <p key={`${selectedNote.id}-${index}`}>{paragraph}</p>
+          ))}
+        </div>
+      </article>
+      <footer className="note-toolbar">
+        <span>읽기 전용</span>
+        <button
+          type="button"
+          onClick={() => setToast("사건 기록은 수정할 수 없습니다")}
+        >
+          편집
+        </button>
+      </footer>
     </section>
   );
 
@@ -1236,17 +1482,17 @@ export default function Home() {
           <small>WOLBAEK_2-4</small>
         </div>
         <div>
-          <span className="setting-icon bluetooth">ᛒ</span>
+          <span className="setting-icon bluetooth"><UiIcon name="bluetooth" size={19} /></span>
           <strong>블루투스</strong>
           <small>켜짐</small>
         </div>
         <div>
-          <span className="setting-icon battery">▰</span>
+          <span className="setting-icon battery"><UiIcon name="battery" size={19} /></span>
           <strong>배터리</strong>
           <small>47%</small>
         </div>
         <button type="button" className="setting-action" onClick={restoreFullscreen}>
-          <span className="setting-icon fullscreen">⛶</span>
+          <span className="setting-icon fullscreen"><UiIcon name="fullscreen" size={19} /></span>
           <strong>전체 화면 다시 켜기</strong>
           <small>게임 화면 유지</small>
         </button>
@@ -1255,8 +1501,31 @@ export default function Home() {
   );
 
   const renderGuide = () => (
-    <section className="app-surface guide-app">
+    <section className={`app-surface guide-app guide-font-${guideFontSize}`}>
       {renderHeader("게임 안내", "언제든 다시 확인할 수 있습니다")}
+      <div className="guide-reader-toolbar" aria-label="게임 설명서 글자 크기">
+        <span>글자 크기</span>
+        <div>
+          {(
+            [
+              ["small", "작게", "가"],
+              ["medium", "기본", "가"],
+              ["large", "크게", "가"],
+            ] as const
+          ).map(([size, label, glyph]) => (
+            <button
+              type="button"
+              key={size}
+              className={guideFontSize === size ? "active" : ""}
+              aria-pressed={guideFontSize === size}
+              onClick={() => changeGuideFontSize(size)}
+            >
+              <b className={`font-glyph ${size}`}>{glyph}</b>
+              <small>{label}</small>
+            </button>
+          ))}
+        </div>
+      </div>
       <article className="identity-card">
         <span>내 캐릭터</span>
         <div>
@@ -1335,14 +1604,26 @@ export default function Home() {
             <p>10월 12일 토요일</p>
           </div>
           <div className="notification-stack">
-            <article>
-              <span className="notif-icon message"><AppGlyph name="messages" /></span>
-              <div>
-                <b>윤서아</b>
-                <p>오늘 밤 2학년 4반에서 끝내자.</p>
-              </div>
-              <time>방금</time>
-            </article>
+            {latestUnreadThread ? (
+              <article>
+                <span className="notif-icon message"><AppGlyph name="messages" /></span>
+                <div>
+                  <b>{latestUnreadThread.name}</b>
+                  <p>{latestUnreadThread.preview}</p>
+                </div>
+                <time>{activity.unreadMessages[latestUnreadThread.name]}개</time>
+              </article>
+            ) : null}
+            {activity.missedCalls > 0 ? (
+              <article>
+                <span className="notif-icon phone"><AppGlyph name="phone" /></span>
+                <div>
+                  <b>부재중 전화</b>
+                  <p>엄마 · 오후 9:07</p>
+                </div>
+                <time>1개</time>
+              </article>
+            ) : null}
             <article>
               <span className="notif-icon calendar"><AppGlyph name="calendar" /></span>
               <div>
@@ -1388,7 +1669,9 @@ export default function Home() {
             <span>10월 12일 토요일 · 흐림 16°</span>
           </div>
           <div className="app-grid">
-            {apps.map((app) => (
+            {apps.map((app) => {
+              const badge = getAppBadge(app.id);
+              return (
               <button
                 type="button"
                 key={app.id}
@@ -1397,18 +1680,21 @@ export default function Home() {
               >
                 <span className={`app-icon app-${app.id}`}>
                   <AppGlyph name={app.icon as AppGlyphName} />
-                  {"badge" in app && app.badge ? <b>{app.badge}</b> : null}
+                  {badge > 0 ? <b>{badge}</b> : null}
                 </span>
                 <small>{app.label}</small>
               </button>
-            ))}
+              );
+            })}
           </div>
           <div className="home-page-dots" aria-hidden="true">
             <i />
             <i className="active" />
           </div>
           <div className="home-dock">
-            {apps.slice(0, 4).map((app) => (
+            {apps.slice(0, 4).map((app) => {
+              const badge = getAppBadge(app.id);
+              return (
               <button
                 type="button"
                 key={`dock-${app.id}`}
@@ -1418,9 +1704,11 @@ export default function Home() {
               >
                 <span className={`app-icon app-${app.id}`}>
                   <AppGlyph name={app.icon as AppGlyphName} />
+                  {badge > 0 ? <b>{badge}</b> : null}
                 </span>
               </button>
-            ))}
+              );
+            })}
           </div>
         </section>
       );
@@ -1433,6 +1721,7 @@ export default function Home() {
     if (screen === "files") return renderFiles();
     if (screen === "recorder") return renderRecorder();
     if (screen === "notes") return renderNotes();
+    if (screen === "note") return renderNote();
     if (screen === "calendar") return renderCalendar();
     if (screen === "contacts") return renderContacts();
     if (screen === "guide") return renderGuide();
@@ -1470,9 +1759,23 @@ export default function Home() {
             <span />
           </div>
           <div className="phone-screen">
+            {screen !== "lock" && screen !== "home" ? (
+              <div
+                className={`status-bar-scrim ${
+                  screen === "note" && selectedNote.tone === "dark"
+                    ? "dark-note"
+                    : ""
+                }`}
+                aria-hidden="true"
+              />
+            ) : null}
             <div
               className={`status-bar ${
-                screen === "lock" || screen === "home" ? "" : "dark"
+                screen === "lock" ||
+                screen === "home" ||
+                (screen === "note" && selectedNote.tone === "dark")
+                  ? ""
+                  : "dark"
               }`}
             >
               <b>{statusTime}</b>

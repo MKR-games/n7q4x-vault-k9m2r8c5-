@@ -355,6 +355,14 @@ button {
   background: #3aca64;
 }
 
+.notif-icon.phone {
+  background: #2fc45d;
+}
+
+.notif-icon.phone .app-glyph {
+  transform: rotate(-11deg);
+}
+
 .notif-icon.calendar {
   color: #e84851;
   background: white;
@@ -636,6 +644,56 @@ button {
   font-size: 12px;
 }
 
+.message-search {
+  min-height: 40px;
+  margin: 12px 14px;
+  padding: 0 11px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #858a94;
+  background: #e7e9ee;
+}
+
+.message-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  color: #24272d;
+  background: transparent;
+  font-size: 12px;
+}
+
+.message-search input::placeholder {
+  color: #969aa3;
+}
+
+.message-search input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.message-search button {
+  width: 27px;
+  height: 27px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #777c86;
+  background: #d6d9df;
+}
+
+.message-empty {
+  margin: 0;
+  padding: 34px 16px;
+  color: #8a8e97;
+  text-align: center;
+  font-size: 11px;
+}
+
 .thread-list {
   margin-left: 14px;
   border-radius: 17px 0 0 17px;
@@ -852,12 +910,29 @@ button {
 }
 
 .phone-tabs button {
+  position: relative;
   height: 31px;
   border: 0;
   border-radius: 8px;
   color: #777b84;
   background: transparent;
   font-size: 10px;
+}
+
+.tab-badge {
+  position: absolute;
+  top: 3px;
+  right: 6px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 4px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: white;
+  background: #e84152;
+  font-size: 8px;
+  line-height: 1;
 }
 
 .phone-tabs button.active {
@@ -1416,9 +1491,21 @@ button {
 .note-card {
   min-height: 136px;
   padding: 14px;
+  border: 0;
   border-radius: 16px;
+  color: #22242a;
   background: #fff;
   box-shadow: 0 5px 16px rgba(41, 38, 30, 0.05);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+.note-card:active {
+  transform: scale(0.97);
+  box-shadow: 0 2px 8px rgba(41, 38, 30, 0.08);
 }
 
 .note-card.important {
@@ -1459,6 +1546,96 @@ button {
   background: #ffd947;
   box-shadow: 0 7px 20px rgba(94, 76, 21, 0.23);
   font-size: 27px;
+}
+
+.note-detail-app {
+  padding-bottom: 84px;
+  background: #f7f5ee;
+}
+
+.note-detail-app.dark {
+  background: #272930;
+}
+
+.note-detail-app.dark .app-header {
+  color: #f5f6f8;
+  background: rgba(39, 41, 48, 0.94);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.note-detail-app.dark .app-header p,
+.note-detail-app.dark .back-button {
+  color: #d4d7de;
+}
+
+.note-document {
+  min-height: calc(100% - 74px);
+  margin: 0;
+  padding: 23px 22px 110px;
+  color: #24262b;
+  background: #fffdf6;
+}
+
+.note-detail-app.important .note-document {
+  background: #fff4b8;
+}
+
+.note-detail-app.dark .note-document {
+  color: #f1f2f5;
+  background: #30323a;
+}
+
+.note-document time {
+  display: block;
+  margin-bottom: 26px;
+  color: #8d8a81;
+  font-size: 9px;
+  text-align: center;
+}
+
+.note-detail-app.dark .note-document time {
+  color: #aeb2bc;
+}
+
+.note-document p {
+  margin: 0 0 16px;
+  font-size: 15px;
+  line-height: 1.85;
+  letter-spacing: -0.02em;
+  word-break: keep-all;
+}
+
+.note-toolbar {
+  position: sticky;
+  z-index: 13;
+  bottom: 0;
+  min-height: 58px;
+  padding: 9px 17px calc(9px + env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(31, 36, 46, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #858992;
+  background: rgba(250, 250, 249, 0.94);
+  backdrop-filter: blur(20px);
+  font-size: 9px;
+}
+
+.note-toolbar button {
+  min-width: 58px;
+  height: 32px;
+  border: 0;
+  border-radius: 10px;
+  color: #6b5716;
+  background: #ffd84f;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.note-detail-app.dark .note-toolbar {
+  color: #b2b5bd;
+  background: rgba(39, 41, 48, 0.95);
+  border-top-color: rgba(255, 255, 255, 0.08);
 }
 
 .calendar-app {
@@ -2208,6 +2385,100 @@ input {
 .guide-app {
   padding-bottom: 62px;
   background: #f3f4f8;
+}
+
+.guide-reader-toolbar {
+  margin: 13px;
+  padding: 11px 12px;
+  border: 1px solid rgba(31, 38, 54, 0.06);
+  border-radius: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: white;
+  box-shadow: 0 4px 14px rgba(31, 36, 48, 0.04);
+}
+
+.guide-reader-toolbar > span {
+  color: #626773;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.guide-reader-toolbar > div {
+  padding: 3px;
+  border-radius: 11px;
+  display: flex;
+  gap: 2px;
+  background: #eceef2;
+}
+
+.guide-reader-toolbar button {
+  min-width: 54px;
+  height: 37px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #767b85;
+  background: transparent;
+}
+
+.guide-reader-toolbar button.active {
+  color: #4f38b2;
+  background: white;
+  box-shadow: 0 1px 5px rgba(28, 32, 43, 0.12);
+}
+
+.guide-reader-toolbar button small {
+  font-size: 8px;
+}
+
+.font-glyph {
+  font-size: 11px;
+}
+
+.font-glyph.small {
+  font-size: 9px;
+}
+
+.font-glyph.large {
+  font-size: 14px;
+}
+
+.guide-app {
+  --guide-font-size: 11px;
+  --guide-heading-size: 15px;
+}
+
+.guide-app.guide-font-small {
+  --guide-font-size: 9px;
+  --guide-heading-size: 13px;
+}
+
+.guide-app.guide-font-large {
+  --guide-font-size: 14px;
+  --guide-heading-size: 18px;
+}
+
+.guide-app .identity-card > p,
+.guide-app .guide-section > p,
+.guide-app .guide-section ol {
+  font-size: var(--guide-font-size);
+}
+
+.guide-app .guide-section h2 {
+  font-size: var(--guide-heading-size);
+}
+
+.guide-app .round-list span {
+  min-height: calc(32px + var(--guide-font-size));
+  font-size: calc(var(--guide-font-size) * 0.92);
+  line-height: 1.55;
 }
 
 .identity-card,

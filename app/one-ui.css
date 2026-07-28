@@ -993,6 +993,34 @@ button {
   transform: none;
 }
 
+.app-surface {
+  overscroll-behavior-y: contain;
+  scroll-padding-top: 107px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-header,
+.thread-header,
+.gallery-header {
+  top: 0;
+}
+
+.status-bar-scrim {
+  position: absolute;
+  z-index: 70;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 43px;
+  pointer-events: none;
+  background: rgba(247, 247, 249, 0.98);
+  box-shadow: 0 1px 0 rgba(22, 25, 31, 0.035);
+}
+
+.status-bar-scrim.dark-note {
+  background: rgba(39, 41, 48, 0.99);
+}
+
 @media (max-width: 860px) {
   .status-bar {
     height: calc(39px + env(safe-area-inset-top));
@@ -1005,6 +1033,17 @@ button {
 
   .app-surface {
     padding-top: calc(39px + env(safe-area-inset-top));
+    scroll-padding-top: calc(103px + env(safe-area-inset-top));
+  }
+
+  .app-header,
+  .thread-header,
+  .gallery-header {
+    top: 0;
+  }
+
+  .status-bar-scrim {
+    height: calc(39px + env(safe-area-inset-top));
   }
 
   .home-date {
@@ -1037,9 +1076,6 @@ button {
     display: none;
   }
 
-  .gallery-header {
-    top: -1px;
-  }
 }
 
 @media (max-height: 720px) {
