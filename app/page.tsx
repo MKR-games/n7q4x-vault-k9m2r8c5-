@@ -58,27 +58,27 @@ const unlockConfig: Record<
 > = {
   gallery: {
     title: "숨김 앨범",
-    hint: "실물 단서카드에서 확인한 네 자리 암호",
+    hint: "그 애가 태어난 날. 월과 일을 네 자리로.",
     answer: "1012",
   },
   messages: {
     title: "삭제된 대화",
-    hint: "실물 단서카드에서 확인한 네 자리 암호",
+    hint: "지워진 말은 사라져도, 사건의 음성은 번호 끝에 남는다.",
     answer: "2357",
   },
   voice: {
     title: "잠긴 음성메모",
-    hint: "실물 단서카드에서 확인한 네 자리 암호",
+    hint: "이 휴대전화 주인이 태어난 날. 월과 일을 네 자리로.",
     answer: "0416",
   },
   file: {
     title: "암호화된 동영상",
-    hint: "실물 단서카드에서 확인한 대문자 영문 암호",
+    hint: "옥상에서 떨어진 학생의 이름. 영문 대문자로.",
     answer: "NARI",
   },
   device: {
     title: "주변기기 연결기록",
-    hint: "실물 단서카드에서 확인한 네 자리 암호",
+    hint: "찢어진 점검표 속 장치번호를 숫자 네 자리로.",
     answer: "0004",
   },
 };
@@ -1910,7 +1910,10 @@ export default function Home() {
           >
             <span className="modal-lock"><UiIcon name="lock" size={22} /></span>
             <h2>{unlockConfig[unlockTarget].title}</h2>
-            <p>{unlockConfig[unlockTarget].hint}</p>
+            <aside className="unlock-hint" aria-label="암호 힌트">
+              <span>암호 힌트</span>
+              <p>{unlockConfig[unlockTarget].hint}</p>
+            </aside>
             <input
               autoFocus
               value={unlockInput}
@@ -1924,7 +1927,7 @@ export default function Home() {
             {unlockError ? (
               <small className="unlock-error">암호가 일치하지 않습니다.</small>
             ) : null}
-            <div>
+            <div className="unlock-actions">
               <button type="button" onClick={() => setUnlockTarget(null)}>
                 취소
               </button>

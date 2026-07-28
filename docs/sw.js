@@ -3,8 +3,8 @@ const APP_ROOT = new URL("./", self.registration.scope);
 const BUILD_ASSETS = [
   "./app-icon.svg",
   "./assets/doyoon-seoa.png",
-  "./assets/index-DmBP367m.css",
-  "./assets/index-DuoNa9Wh.js",
+  "./assets/index-DFCwL5IR.css",
+  "./assets/index-PQszIXW4.js",
   "./assets/nari-final-evidence.mp4",
   "./assets/rooftop-evidence.png",
   "./assets/student-council-Cp7hoYoH.png",
