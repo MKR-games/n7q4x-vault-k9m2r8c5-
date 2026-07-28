@@ -45,5 +45,11 @@ test("built app keeps character identity and removes obsolete school name", asyn
   assert.doesNotMatch(script, /해원고등학교|이름 정보가 손상되었습니다/);
   assert.doesNotMatch(script, /doyoon-vote|최종 투표|투표 확정/);
   assert.match(script, /사진 상세정보|두 손가락으로 확대/);
+  assert.match(script, /doyoon-phone-activity/);
+  assert.match(script, /모든 메시지를 읽었습니다/);
+  assert.match(script, /대화 검색/);
+  assert.match(script, /읽기 전용/);
+  assert.match(script, /doyoon-guide-font-size/);
+  assert.match(script, /글자 크기/);
   assert.doesNotMatch(script, /"\/assets\//);
 });
