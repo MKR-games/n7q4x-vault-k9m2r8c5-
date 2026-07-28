@@ -94,6 +94,34 @@ const phoneNumbers = {
   yuri: "010-0000-6158",
 } as const;
 
+const phoneContacts = [
+  { name: "박재민", number: phoneNumbers.jaemin },
+  { name: "서유리", number: phoneNumbers.yuri },
+  { name: "윤서아", number: phoneNumbers.seoa },
+  { name: "최현우", number: phoneNumbers.hyunwoo },
+  { name: "학생회실", number: phoneNumbers.council },
+] as const;
+
+const allSavedContacts = [
+  ...phoneContacts,
+  { name: "엄마", number: phoneNumbers.mother },
+  { name: "사건 음성보관함", number: phoneNumbers.archive },
+] as const;
+
+function normalizePhoneNumber(value: string) {
+  return value.replace(/\D/g, "");
+}
+
+function savedContactName(value: string) {
+  const normalized = normalizePhoneNumber(value);
+  if (!normalized) return null;
+  return (
+    allSavedContacts.find(
+      (contact) => normalizePhoneNumber(contact.number) === normalized,
+    )?.name ?? null
+  );
+}
+
 const apps = [
   { id: "messages", label: "메시지", icon: "messages" },
   { id: "phone", label: "전화", icon: "phone" },
@@ -323,6 +351,7 @@ export default function Home() {
     number: string;
     transcript: string;
   } | null>(null);
+  const [videoOpen, setVideoOpen] = useState(false);
   const [voicePlaying, setVoicePlaying] = useState(false);
   const [phoneTab, setPhoneTab] = useState<"keypad" | "recent" | "contacts">(
     "keypad",
@@ -338,6 +367,8 @@ export default function Home() {
     useState<GuideFontSize>("medium");
   const unlockTargetRef = useRef<UnlockKey | null>(null);
   const callOpenRef = useRef(false);
+  const videoOpenRef = useRef(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const imageOpenRef = useRef(false);
   const viewerDetailsRef = useRef(false);
   const swipeStartY = useRef<number | null>(null);
@@ -354,9 +385,10 @@ export default function Home() {
   useEffect(() => {
     unlockTargetRef.current = unlockTarget;
     callOpenRef.current = Boolean(call);
+    videoOpenRef.current = videoOpen;
     imageOpenRef.current = Boolean(selectedImageId);
     viewerDetailsRef.current = viewerDetails;
-  }, [unlockTarget, call, selectedImageId, viewerDetails]);
+  }, [unlockTarget, call, videoOpen, selectedImageId, viewerDetails]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -375,6 +407,9 @@ export default function Home() {
       if (callOpenRef.current) {
         window.speechSynthesis?.cancel();
         setCall(null);
+      } else if (videoOpenRef.current) {
+        videoRef.current?.pause();
+        setVideoOpen(false);
       } else if (unlockTargetRef.current) {
         setUnlockTarget(null);
       } else if (viewerDetailsRef.current) {
@@ -769,6 +804,9 @@ export default function Home() {
     setUnlockTarget(null);
     setUnlockInput("");
     setUnlockError(false);
+    if (unlockTarget === "file") {
+      setVideoOpen(true);
+    }
     setToast(`${config.title} 잠금이 해제되었습니다`);
     vibrate([20, 50, 30]);
   };
@@ -785,9 +823,10 @@ export default function Home() {
   };
 
   const startCall = () => {
-    const normalized = dial.replace(/\D/g, "");
-    const seoANumber = phoneNumbers.seoa.replace(/\D/g, "");
-    const archiveNumber = phoneNumbers.archive.replace(/\D/g, "");
+    const normalized = normalizePhoneNumber(dial);
+    const seoANumber = normalizePhoneNumber(phoneNumbers.seoa);
+    const archiveNumber = normalizePhoneNumber(phoneNumbers.archive);
+    const contactName = savedContactName(dial);
     if (normalized === seoANumber) {
       setCall({
         mode: "recording",
@@ -810,7 +849,7 @@ export default function Home() {
       setCall({
         mode: "unavailable",
         phase: "calling",
-        title: "알 수 없음",
+        title: contactName ?? (normalized ? "알 수 없음" : "번호 없음"),
         number: dial || "번호 없음",
         transcript: "연결할 수 없는 번호입니다. 번호를 확인한 뒤 다시 걸어 주세요.",
       });
@@ -823,6 +862,11 @@ export default function Home() {
       window.speechSynthesis.cancel();
     }
     setCall(null);
+  };
+
+  const closeVideo = () => {
+    videoRef.current?.pause();
+    setVideoOpen(false);
   };
 
   const playLockedVoice = () => {
@@ -1049,7 +1093,11 @@ export default function Home() {
         <>
           <div className="dial-display">
             <strong>{dial || "번호 입력"}</strong>
-            {dial ? <small>번호를 확인한 뒤 통화 버튼을 누르세요</small> : null}
+            {dial ? (
+              <small>
+                {savedContactName(dial) ?? "번호를 확인한 뒤 통화 버튼을 누르세요"}
+              </small>
+            ) : null}
           </div>
           <div className="keypad">
             {[
@@ -1107,13 +1155,7 @@ export default function Home() {
         </div>
       ) : (
         <div className="phone-list">
-          {[
-            ["박재민", phoneNumbers.jaemin],
-            ["서유리", phoneNumbers.yuri],
-            ["윤서아", phoneNumbers.seoa],
-            ["최현우", phoneNumbers.hyunwoo],
-            ["학생회실", phoneNumbers.council],
-          ].map(([name, number]) => (
+          {phoneContacts.map(({ name, number }) => (
             <button
               type="button"
               key={name}
@@ -1236,7 +1278,7 @@ export default function Home() {
         <button
           type="button"
           className="file-row"
-          onClick={() => (unlocks.file ? setToast("파일 정보를 열었습니다") : openUnlock("file"))}
+          onClick={() => (unlocks.file ? setVideoOpen(true) : openUnlock("file"))}
         >
           <span className="file-icon video"><UiIcon name="video" size={20} /></span>
           <span>
@@ -1246,14 +1288,22 @@ export default function Home() {
           <b>{unlocks.file ? "열기" : <UiIcon name="lock" size={17} />}</b>
         </button>
         {unlocks.file ? (
-          <article className="file-preview">
-            <img src="assets/rooftop-evidence.png" alt="복구 영상 미리보기" />
+          <button
+            type="button"
+            className="file-preview"
+            onClick={() => setVideoOpen(true)}
+            aria-label="복구된 동영상 재생"
+          >
+            <span className="file-preview-thumb">
+              <img src="assets/rooftop-evidence.png" alt="복구 영상 미리보기" />
+              <i><UiIcon name="play" size={20} /></i>
+            </span>
             <div>
               <strong>23:55 수신 완료</strong>
               <p>보낸 사람: 박재민</p>
-              <p>수신 기기: 이 휴대전화</p>
+              <p>00:09 · 눌러서 재생</p>
             </div>
-          </article>
+          </button>
         ) : null}
         <button
           type="button"
@@ -1454,13 +1504,7 @@ export default function Home() {
         </div>
       </div>
       <div className="contact-list">
-        {[
-          ["박재민", phoneNumbers.jaemin],
-          ["서유리", phoneNumbers.yuri],
-          ["윤서아", phoneNumbers.seoa],
-          ["최현우", phoneNumbers.hyunwoo],
-          ["학생회실", phoneNumbers.council],
-        ].map(([name, number]) => (
+        {phoneContacts.map(({ name, number }) => (
           <button
             type="button"
             key={name}
@@ -1543,6 +1587,32 @@ export default function Home() {
           ))}
         </div>
       </div>
+      <details className="guide-story">
+        <summary>
+          <span>
+            <b>이야기의 배경</b>
+            <small>눌러서 펼쳐 보기</small>
+          </span>
+          <i aria-hidden="true">⌄</i>
+        </summary>
+        <div>
+          <p>
+            두 달 전, 월백고등학교 옥상에서 학생 이나리가 추락하는 사고가
+            있었다. 사고의 진실은 밝혀지지 않은 채 학교 안에는 서로 다른
+            소문만 남았다.
+          </p>
+          <p>
+            10월 12일 늦은 밤, 윤서아는 강도윤·박재민·서유리·최현우를
+            비어 있는 2학년 4반으로 불러냈다. 자정 무렵 학교 전체가 갑자기
+            암전되었고, 다시 불이 들어온 뒤 윤서아가 숨진 채 발견되었다.
+          </p>
+          <p>
+            네 사람은 그날 밤의 이유와 두 달 전 사고에 대해 저마다 감추는
+            사실이 있다. 휴대전화 기록과 단서카드를 조사해 현재 사건의
+            범인과 과거 사건의 진실을 밝혀내야 한다.
+          </p>
+        </div>
+      </details>
       <article className="identity-card">
         <span>내 캐릭터</span>
         <div>
@@ -1915,6 +1985,46 @@ export default function Home() {
               <UiIcon name="hangup" size={30} />
             </button>
           </div>
+        </div>
+      ) : null}
+
+      {videoOpen ? (
+        <div
+          className="video-viewer"
+          role="dialog"
+          aria-modal="true"
+          aria-label="NARI_FINAL 동영상 재생"
+        >
+          <header>
+            <button type="button" onClick={closeVideo} aria-label="동영상 닫기">
+              <UiIcon name="back" size={24} />
+            </button>
+            <div>
+              <strong>NARI_FINAL.mp4</strong>
+              <span>복구된 동영상</span>
+            </div>
+            <span />
+          </header>
+          <div className="video-frame">
+            <video
+              ref={videoRef}
+              controls
+              playsInline
+              preload="metadata"
+              poster="assets/rooftop-evidence.png"
+            >
+              <source src="assets/nari-final-evidence.mp4" type="video/mp4" />
+              이 기기에서는 동영상을 재생할 수 없습니다.
+            </video>
+          </div>
+          <article>
+            <strong>복구된 원본 영상</strong>
+            <p>
+              8월 · 날짜 정보 손상 · 월백고등학교 옥상
+              <br />
+              영상 00:09 · 오디오 데이터 손상
+            </p>
+          </article>
         </div>
       ) : null}
 

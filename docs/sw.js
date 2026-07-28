@@ -1,10 +1,11 @@
-const CACHE_NAME = "gangdoyoon-phone-v3";
+const CACHE_NAME = "gangdoyoon-phone-v4";
 const APP_ROOT = new URL("./", self.registration.scope);
 const BUILD_ASSETS = [
   "./app-icon.svg",
   "./assets/doyoon-seoa.png",
-  "./assets/index-BunRGtJT.css",
-  "./assets/index-C1HGOQY0.js",
+  "./assets/index-DmBP367m.css",
+  "./assets/index-DuoNa9Wh.js",
+  "./assets/nari-final-evidence.mp4",
   "./assets/rooftop-evidence.png",
   "./assets/student-council-Cp7hoYoH.png",
   "./assets/student-council.png",
@@ -27,6 +28,7 @@ const CORE_ASSETS = [
   new URL("assets/student-council.png", APP_ROOT).href,
   new URL("assets/doyoon-seoa.png", APP_ROOT).href,
   new URL("assets/rooftop-evidence.png", APP_ROOT).href,
+  new URL("assets/nari-final-evidence.mp4", APP_ROOT).href,
 ];
 
 self.addEventListener("install", (event) => {
