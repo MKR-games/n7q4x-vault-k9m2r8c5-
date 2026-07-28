@@ -1,5 +1,3 @@
-@import "tailwindcss";
-
 :root {
   --ink: #11141a;
   --muted: #747983;
@@ -278,7 +276,8 @@ button {
   position: absolute;
   inset: 0;
   color: white;
-  background: url("/assets/student-council.png") center / cover no-repeat;
+  background: url("../public/assets/student-council.png") center / cover no-repeat;
+  touch-action: manipulation;
 }
 
 .lock-shade,
@@ -1987,5 +1986,457 @@ button {
   .keypad button {
     width: 52px;
     height: 52px;
+  }
+}
+
+/* Final character-phone presentation */
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: #05070b;
+}
+
+body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+input {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.phone-stage {
+  position: fixed;
+  inset: 0;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 28% 12%, rgba(50, 67, 110, 0.22), transparent 34%),
+    linear-gradient(145deg, #111722, #05070b 64%);
+}
+
+.immersive-entry {
+  position: fixed;
+  inset: 0;
+  min-height: 100dvh;
+  padding:
+    max(28px, env(safe-area-inset-top))
+    24px
+    max(28px, env(safe-area-inset-bottom));
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  isolation: isolate;
+  color: #f5f7fb;
+  background:
+    radial-gradient(circle at 50% 24%, rgba(72, 91, 145, 0.24), transparent 34%),
+    linear-gradient(160deg, #111722, #05070b 62%, #080b11);
+}
+
+.entry-noise {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.24;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: linear-gradient(to bottom, black, transparent 88%);
+}
+
+.immersive-entry section {
+  width: min(360px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.entry-device {
+  color: #8e9ab7;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.entry-avatar {
+  width: 82px;
+  height: 82px;
+  margin: 30px 0 18px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: white;
+  background: linear-gradient(145deg, #78849e, #303746);
+  box-shadow:
+    0 16px 45px rgba(0, 0, 0, 0.36),
+    inset 0 0 0 5px rgba(255, 255, 255, 0.05);
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.immersive-entry h1 {
+  margin: 0;
+  font-size: clamp(28px, 8vw, 38px);
+  letter-spacing: -0.055em;
+}
+
+.immersive-entry p {
+  margin: 13px 0 0;
+  color: #aeb6c9;
+  font-size: 13px;
+  line-height: 1.72;
+  word-break: keep-all;
+}
+
+.immersive-entry button {
+  width: 100%;
+  height: 56px;
+  margin-top: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 18px;
+  color: #111826;
+  background: #f4f6fb;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.immersive-entry button:active {
+  transform: scale(0.98);
+  background: #dce1eb;
+}
+
+.immersive-entry small {
+  max-width: 310px;
+  margin-top: 15px;
+  color: #717b92;
+  font-size: 9px;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+.status-bar.dark {
+  color: #20242c;
+  text-shadow: none;
+}
+
+.phone-list {
+  margin: 16px 13px;
+  overflow: hidden;
+  border-radius: 17px;
+  background: white;
+}
+
+.phone-list button {
+  width: 100%;
+  min-height: 68px;
+  padding: 10px 15px;
+  border: 0;
+  border-bottom: 1px solid #eceef2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #20232a;
+  background: white;
+  text-align: left;
+}
+
+.phone-list button:last-child {
+  border-bottom: 0;
+}
+
+.phone-list button > span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.phone-list strong {
+  font-size: 13px;
+}
+
+.phone-list small,
+.phone-list time {
+  color: #858a94;
+  font-size: 9px;
+}
+
+.phone-list .missed strong,
+.phone-list .missed small {
+  color: #d94b59;
+}
+
+.phone-list button > b {
+  color: #36ad5b;
+}
+
+.gallery-grid figure {
+  cursor: pointer;
+}
+
+.settings-list > .setting-action {
+  width: 100%;
+  min-height: 63px;
+  padding: 9px 14px 9px 0;
+  border: 0;
+  border-bottom: 1px solid #eceef2;
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  background: white;
+  text-align: left;
+}
+
+.setting-icon.fullscreen {
+  background: #7b62de;
+}
+
+.guide-app {
+  padding-bottom: 62px;
+  background: #f3f4f8;
+}
+
+.identity-card,
+.guide-section {
+  margin: 13px;
+  padding: 16px;
+  border: 1px solid rgba(31, 38, 54, 0.06);
+  border-radius: 20px;
+  background: white;
+  box-shadow: 0 6px 20px rgba(31, 36, 48, 0.045);
+}
+
+.identity-card > span {
+  color: #775ee8;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.identity-card > div {
+  margin-top: 11px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.identity-card > div > b {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: white;
+  background: linear-gradient(145deg, #7d879d, #3b4250);
+  font-size: 19px;
+}
+
+.identity-card > div p {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.identity-card strong {
+  font-size: 15px;
+}
+
+.identity-card small {
+  color: #7d828c;
+  font-size: 9px;
+}
+
+.identity-card > p,
+.guide-section > p {
+  margin: 13px 0 0;
+  color: #666c78;
+  font-size: 10px;
+  line-height: 1.65;
+  word-break: keep-all;
+}
+
+.guide-section h2 {
+  margin: 0;
+  font-size: 14px;
+  letter-spacing: -0.03em;
+}
+
+.guide-section ol {
+  margin: 12px 0 0;
+  padding-left: 20px;
+  color: #5f6570;
+  font-size: 10px;
+  line-height: 1.8;
+}
+
+.round-list {
+  margin-top: 12px;
+  overflow: hidden;
+  border: 1px solid #eceef3;
+  border-radius: 14px;
+}
+
+.round-list span {
+  min-height: 42px;
+  padding: 8px 10px;
+  border-bottom: 1px solid #eceef3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #5f6570;
+  font-size: 9px;
+}
+
+.round-list span:last-child {
+  border-bottom: 0;
+}
+
+.round-list b {
+  width: 23px;
+  height: 23px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: #6650c8;
+  background: #eeeafd;
+}
+
+.guide-note {
+  padding: 10px 11px;
+  border-radius: 11px;
+  color: #6654ae !important;
+  background: #f0edfd;
+}
+
+.image-viewer {
+  position: absolute;
+  z-index: 320;
+  inset: 0;
+  padding:
+    max(58px, calc(env(safe-area-inset-top) + 42px))
+    16px
+    max(34px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  background: rgba(2, 3, 6, 0.96);
+}
+
+.image-viewer button {
+  position: absolute;
+  top: max(16px, env(safe-area-inset-top));
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  color: white;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 26px;
+}
+
+.image-viewer img {
+  max-width: 100%;
+  max-height: min(68vh, 620px);
+  border-radius: 8px;
+  object-fit: contain;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+}
+
+.image-viewer p {
+  margin: 16px 0 0;
+  color: #c6cad3;
+  font-size: 10px;
+  text-align: center;
+}
+
+@media (max-width: 860px) {
+  .phone-stage {
+    display: block;
+    min-height: 100dvh;
+    background: #050608;
+  }
+
+  .phone-shell,
+  .phone-bezel,
+  .phone-screen {
+    width: 100vw;
+    height: 100dvh;
+    min-height: 0;
+  }
+
+  .phone-bezel {
+    padding: 0;
+    border-radius: 0;
+    background: #050608;
+    box-shadow: none;
+  }
+
+  .phone-bezel::before,
+  .phone-bezel::after,
+  .camera-island {
+    display: none;
+  }
+
+  .phone-screen {
+    border-radius: 0;
+  }
+
+  .status-bar {
+    height: calc(38px + env(safe-area-inset-top));
+    padding:
+      env(safe-area-inset-top)
+      max(18px, env(safe-area-inset-right))
+      0
+      max(18px, env(safe-area-inset-left));
+  }
+
+  .app-surface {
+    padding-top: calc(38px + env(safe-area-inset-top));
+    padding-bottom: calc(30px + env(safe-area-inset-bottom));
+  }
+
+  .home-date {
+    padding-top: calc(52px + env(safe-area-inset-top));
+  }
+
+  .lock-top {
+    padding-top: calc(54px + env(safe-area-inset-top));
+  }
+
+  .home-dock {
+    bottom: calc(18px + env(safe-area-inset-bottom));
+  }
+
+  .home-indicator {
+    bottom: max(6px, env(safe-area-inset-bottom));
+  }
+
+  .toast {
+    bottom: calc(24px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (display-mode: standalone) {
+  .home-indicator {
+    bottom: max(7px, env(safe-area-inset-bottom));
   }
 }

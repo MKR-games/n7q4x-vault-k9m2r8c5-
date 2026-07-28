@@ -1,6 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+/* eslint-disable @next/next/no-img-element */
+
+import {
+  type TouchEvent,
+  type WheelEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  AppGlyph,
+  type AppGlyphName,
+  UiIcon,
+} from "./phone-icons";
 
 type Screen =
   | "lock"
@@ -14,6 +28,7 @@ type Screen =
   | "notes"
   | "calendar"
   | "contacts"
+  | "guide"
   | "settings";
 
 type UnlockKey = "gallery" | "messages" | "voice" | "file" | "device";
@@ -60,16 +75,63 @@ const unlockConfig: Record<
 };
 
 const apps = [
-  { id: "messages", label: "메시지", icon: "💬", color: "#40c96a", badge: 3 },
-  { id: "phone", label: "전화", icon: "☎", color: "#32c45d" },
-  { id: "gallery", label: "갤러리", icon: "✿", color: "#f3f4f7" },
-  { id: "files", label: "파일", icon: "📁", color: "#6ba9ff" },
-  { id: "recorder", label: "음성 녹음", icon: "〽", color: "#ee5262" },
-  { id: "notes", label: "메모", icon: "▤", color: "#ffd34e" },
-  { id: "calendar", label: "캘린더", icon: "12", color: "#ffffff" },
-  { id: "contacts", label: "연락처", icon: "♟", color: "#efb15e" },
-  { id: "settings", label: "설정", icon: "⚙", color: "#a8adb5" },
+  { id: "messages", label: "메시지", icon: "messages", badge: 3 },
+  { id: "phone", label: "전화", icon: "phone" },
+  { id: "gallery", label: "갤러리", icon: "gallery" },
+  { id: "files", label: "내 파일", icon: "files" },
+  { id: "recorder", label: "음성 녹음", icon: "recorder" },
+  { id: "notes", label: "메모", icon: "notes" },
+  { id: "calendar", label: "캘린더", icon: "calendar" },
+  { id: "contacts", label: "연락처", icon: "contacts" },
+  { id: "guide", label: "게임 안내", icon: "guide" },
+  { id: "settings", label: "설정", icon: "settings" },
 ] as const;
+
+type GalleryImage = {
+  alt: string;
+  date: string;
+  file: string;
+  hidden?: boolean;
+  id: string;
+  location: string;
+  meta: string;
+  src: string;
+  title: string;
+};
+
+const galleryImages: GalleryImage[] = [
+  {
+    id: "student-council",
+    src: "assets/student-council.png",
+    alt: "학생회 단체사진",
+    title: "학생회 단체사진",
+    date: "9월 27일 오후 5:31",
+    location: "월백고등학교 학생회실",
+    file: "IMG_0927_1731.jpg",
+    meta: "3024 × 4032 · 3.8 MB",
+  },
+  {
+    id: "doyoon-seoa",
+    src: "assets/doyoon-seoa.png",
+    alt: "교실에서 함께 찍은 강도윤과 윤서아",
+    title: "윤서아와 함께",
+    date: "8월 19일 오후 6:42",
+    location: "월백고등학교 2학년 4반",
+    file: "IMG_0819_1842.jpg",
+    meta: "3024 × 4032 · 3.2 MB",
+  },
+  {
+    id: "rooftop-evidence",
+    src: "assets/rooftop-evidence.png",
+    alt: "옥상에서 학생의 손목을 붙잡고 있는 강도윤",
+    title: "숨김 앨범",
+    date: "10월 12일 오후 5:46",
+    location: "월백고등학교 옥상 · 촬영기기 미확인",
+    file: "IMG_1012_1746.jpg",
+    meta: "1920 × 1080 · 2.1 MB",
+    hidden: true,
+  },
+];
 
 const threads = [
   {
@@ -111,10 +173,39 @@ function vibrate(pattern: number | number[] = 12) {
   }
 }
 
+function clamp(value: number, minimum: number, maximum: number) {
+  return Math.min(maximum, Math.max(minimum, value));
+}
+
+function touchDistance(touches: TouchEvent<HTMLDivElement>["touches"]) {
+  const first = touches[0];
+  const second = touches[1];
+  if (!first || !second) return 0;
+  return Math.hypot(
+    second.clientX - first.clientX,
+    second.clientY - first.clientY,
+  );
+}
+
+function loadUnlocks(): UnlockState {
+  if (typeof window === "undefined") return initialUnlocks;
+  try {
+    const saved = window.localStorage.getItem("doyoon-unlocks");
+    return saved
+      ? { ...initialUnlocks, ...JSON.parse(saved) }
+      : initialUnlocks;
+  } catch {
+    return initialUnlocks;
+  }
+}
+
 export default function Home() {
+  const [entered, setEntered] = useState(false);
   const [screen, setScreen] = useState<Screen>("lock");
+  const screenStack = useRef<Screen[]>(["lock"]);
+  const wakeLock = useRef<{ release: () => Promise<void> } | null>(null);
   const [selectedThread, setSelectedThread] = useState("윤서아");
-  const [unlocks, setUnlocks] = useState<UnlockState>(initialUnlocks);
+  const [unlocks, setUnlocks] = useState<UnlockState>(loadUnlocks);
   const [unlockTarget, setUnlockTarget] = useState<UnlockKey | null>(null);
   const [unlockInput, setUnlockInput] = useState("");
   const [unlockError, setUnlockError] = useState(false);
@@ -127,15 +218,96 @@ export default function Home() {
     transcript: string;
   } | null>(null);
   const [voicePlaying, setVoicePlaying] = useState(false);
+  const [phoneTab, setPhoneTab] = useState<"keypad" | "recent" | "contacts">(
+    "keypad",
+  );
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
+  const [viewerScale, setViewerScale] = useState(1);
+  const [viewerPan, setViewerPan] = useState({ x: 0, y: 0 });
+  const [viewerDetails, setViewerDetails] = useState(false);
+  const unlockTargetRef = useRef<UnlockKey | null>(null);
+  const callOpenRef = useRef(false);
+  const imageOpenRef = useRef(false);
+  const viewerDetailsRef = useRef(false);
+  const swipeStartY = useRef<number | null>(null);
+  const viewerGesture = useRef<{
+    lastDistance: number;
+    lastX: number;
+    lastY: number;
+    startScale: number;
+    startX: number;
+    startY: number;
+  } | null>(null);
+  const lastViewerTap = useRef(0);
 
   useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem("doyoon-unlocks");
-      if (saved) setUnlocks({ ...initialUnlocks, ...JSON.parse(saved) });
-    } catch {
-      // Local persistence is optional.
+    unlockTargetRef.current = unlockTarget;
+    callOpenRef.current = Boolean(call);
+    imageOpenRef.current = Boolean(selectedImageId);
+    viewerDetailsRef.current = viewerDetails;
+  }, [unlockTarget, call, selectedImageId, viewerDetails]);
+
+  useEffect(() => {
+    const guardState = { characterPhone: true };
+    window.history.replaceState(guardState, "", window.location.href);
+    window.history.pushState(guardState, "", window.location.href);
+
+    const handleSystemBack = () => {
+      if (callOpenRef.current) {
+        window.speechSynthesis?.cancel();
+        setCall(null);
+      } else if (unlockTargetRef.current) {
+        setUnlockTarget(null);
+      } else if (viewerDetailsRef.current) {
+        setViewerDetails(false);
+      } else if (imageOpenRef.current) {
+        setSelectedImageId(null);
+      } else if (screenStack.current.length > 1) {
+        screenStack.current.pop();
+        setScreen(screenStack.current.at(-1) ?? "home");
+      }
+      window.history.pushState(guardState, "", window.location.href);
+      vibrate(8);
+    };
+
+    window.addEventListener("popstate", handleSystemBack);
+    return () => window.removeEventListener("popstate", handleSystemBack);
+  }, []);
+
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register(new URL("sw.js", document.baseURI).toString())
+        .catch(() => {
+        // The phone remains playable online if offline registration is blocked.
+        });
     }
   }, []);
+
+  useEffect(() => {
+    if (!entered) return;
+
+    const reacquireWakeLock = async () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const wakeLockApi = navigator as Navigator & {
+          wakeLock?: {
+            request: (
+              type: "screen",
+            ) => Promise<{ release: () => Promise<void> }>;
+          };
+        };
+        wakeLock.current =
+          (await wakeLockApi.wakeLock?.request("screen")) ?? null;
+      } catch {
+        // Battery-saving settings may block wake lock restoration.
+      }
+    };
+
+    document.addEventListener("visibilitychange", reacquireWakeLock);
+    return () =>
+      document.removeEventListener("visibilitychange", reacquireWakeLock);
+  }, [entered]);
 
   useEffect(() => {
     if (!toast) return;
@@ -157,9 +329,222 @@ export default function Home() {
   useEffect(() => {
     if (!call || call.phase !== "connected") return;
     speak(call.transcript);
-  }, [call?.phase]);
+  }, [call]);
+
+  const navigateTo = (next: Screen) => {
+    if (screenStack.current.at(-1) !== next) {
+      screenStack.current.push(next);
+    }
+    setScreen(next);
+    window.history.pushState({ characterPhone: true }, "", window.location.href);
+  };
+
+  const goBack = () => {
+    window.history.back();
+  };
+
+  const unlockPhone = () => {
+    screenStack.current = ["home"];
+    setScreen("home");
+    window.history.pushState({ characterPhone: true }, "", window.location.href);
+    vibrate([15, 25, 15]);
+  };
+
+  const enterPhone = async () => {
+    try {
+      const root = document.documentElement as HTMLElement & {
+        webkitRequestFullscreen?: () => Promise<void>;
+      };
+      if (!document.fullscreenElement) {
+        if (root.requestFullscreen) {
+          await root.requestFullscreen({ navigationUI: "hide" });
+        } else if (root.webkitRequestFullscreen) {
+          await root.webkitRequestFullscreen();
+        }
+      }
+    } catch {
+      // Some mobile browsers only hide their chrome after the first gesture.
+    }
+
+    try {
+      const orientation = window.screen.orientation as ScreenOrientation & {
+        lock?: (mode: "portrait") => Promise<void>;
+      };
+      await orientation.lock?.("portrait");
+    } catch {
+      // Orientation lock is optional on browsers that do not expose it.
+    }
+
+    try {
+      const wakeLockApi = navigator as Navigator & {
+        wakeLock?: {
+          request: (
+            type: "screen",
+          ) => Promise<{ release: () => Promise<void> }>;
+        };
+      };
+      wakeLock.current = (await wakeLockApi.wakeLock?.request("screen")) ?? null;
+    } catch {
+      // Continue even when battery settings block the wake lock.
+    }
+
+    setEntered(true);
+    screenStack.current = ["lock"];
+    setScreen("lock");
+    vibrate([16, 32, 16]);
+  };
+
+  const restoreFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen({
+          navigationUI: "hide",
+        });
+      }
+      setToast("전체 화면을 유지합니다");
+    } catch {
+      setToast("브라우저 메뉴에서 전체 화면을 허용해 주세요");
+    }
+  };
 
   const statusTime = useMemo(() => (screen === "lock" ? "23:47" : "23:48"), [screen]);
+  const visibleGalleryImages = useMemo(
+    () => galleryImages.filter((image) => !image.hidden || unlocks.gallery),
+    [unlocks.gallery],
+  );
+  const selectedImage =
+    visibleGalleryImages.find((image) => image.id === selectedImageId) ?? null;
+  const selectedImagePosition = selectedImage
+    ? visibleGalleryImages.findIndex((image) => image.id === selectedImage.id)
+    : -1;
+
+  const resetViewerTransform = () => {
+    setViewerScale(1);
+    setViewerPan({ x: 0, y: 0 });
+  };
+
+  const openGalleryImage = (id: string) => {
+    setSelectedImageId(id);
+    setViewerDetails(false);
+    resetViewerTransform();
+    vibrate(8);
+  };
+
+  const closeGalleryImage = () => {
+    setSelectedImageId(null);
+    setViewerDetails(false);
+    resetViewerTransform();
+  };
+
+  const setViewerZoom = (nextScale: number) => {
+    const scale = clamp(nextScale, 1, 4);
+    setViewerScale(scale);
+    if (scale === 1) {
+      setViewerPan({ x: 0, y: 0 });
+    }
+  };
+
+  const stepGalleryImage = (direction: -1 | 1) => {
+    if (!selectedImage) return;
+    const currentIndex = visibleGalleryImages.findIndex(
+      (image) => image.id === selectedImage.id,
+    );
+    const nextIndex = clamp(
+      currentIndex + direction,
+      0,
+      visibleGalleryImages.length - 1,
+    );
+    if (nextIndex === currentIndex) {
+      vibrate(6);
+      return;
+    }
+    setSelectedImageId(visibleGalleryImages[nextIndex]?.id ?? null);
+    setViewerDetails(false);
+    resetViewerTransform();
+    vibrate(8);
+  };
+
+  const handleViewerTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    if (event.touches.length >= 2) {
+      viewerGesture.current = {
+        lastDistance: touchDistance(event.touches),
+        lastX: 0,
+        lastY: 0,
+        startScale: viewerScale,
+        startX: 0,
+        startY: 0,
+      };
+      return;
+    }
+
+    const touch = event.touches[0];
+    if (!touch) return;
+    viewerGesture.current = {
+      lastDistance: 0,
+      lastX: touch.clientX,
+      lastY: touch.clientY,
+      startScale: viewerScale,
+      startX: touch.clientX,
+      startY: touch.clientY,
+    };
+  };
+
+  const handleViewerTouchMove = (event: TouchEvent<HTMLDivElement>) => {
+    const gesture = viewerGesture.current;
+    if (!gesture) return;
+
+    if (event.touches.length >= 2 && gesture.lastDistance > 0) {
+      event.preventDefault();
+      const distance = touchDistance(event.touches);
+      setViewerZoom(gesture.startScale * (distance / gesture.lastDistance));
+      return;
+    }
+
+    const touch = event.touches[0];
+    if (!touch || viewerScale <= 1) return;
+    event.preventDefault();
+    const deltaX = touch.clientX - gesture.lastX;
+    const deltaY = touch.clientY - gesture.lastY;
+    gesture.lastX = touch.clientX;
+    gesture.lastY = touch.clientY;
+    setViewerPan((current) => ({
+      x: current.x + deltaX,
+      y: current.y + deltaY,
+    }));
+  };
+
+  const handleViewerTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+    const gesture = viewerGesture.current;
+    const touch = event.changedTouches[0];
+    viewerGesture.current = null;
+    if (!gesture || !touch) return;
+
+    const movementX = touch.clientX - gesture.startX;
+    const movementY = touch.clientY - gesture.startY;
+    if (
+      viewerScale <= 1.05 &&
+      Math.abs(movementX) > 58 &&
+      Math.abs(movementX) > Math.abs(movementY)
+    ) {
+      stepGalleryImage(movementX < 0 ? 1 : -1);
+      return;
+    }
+
+    if (Math.abs(movementX) < 14 && Math.abs(movementY) < 14) {
+      const now = Date.now();
+      if (now - lastViewerTap.current < 280) {
+        setViewerZoom(viewerScale > 1 ? 1 : 2.5);
+        lastViewerTap.current = 0;
+      } else {
+        lastViewerTap.current = now;
+      }
+    }
+  };
+
+  const handleViewerWheel = (event: WheelEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setViewerZoom(viewerScale + (event.deltaY < 0 ? 0.35 : -0.35));
+  };
 
   const persistUnlocks = (next: UnlockState) => {
     setUnlocks(next);
@@ -195,7 +580,7 @@ export default function Home() {
   };
 
   const openApp = (id: string) => {
-    setScreen(id as Screen);
+    navigateTo(id as Screen);
     vibrate();
   };
 
@@ -214,7 +599,7 @@ export default function Home() {
     } else if (normalized === schoolNumber) {
       setCall({
         phase: "calling",
-        title: "해원고 음성보관함",
+        title: "월백고 음성보관함",
         number: "052-204-2357",
         transcript:
           "보관된 메시지입니다. 도윤아, 네가 약속만 지키면 영상은 공개하지 않을게. 오늘이 마지막이야.",
@@ -250,10 +635,10 @@ export default function Home() {
       <button
         className="back-button"
         type="button"
-        onClick={() => setScreen("home")}
-        aria-label="홈으로 돌아가기"
+        onClick={goBack}
+        aria-label="이전 화면으로 돌아가기"
       >
-        ‹
+        <UiIcon name="back" size={24} />
       </button>
       <div>
         <h1>{title}</h1>
@@ -275,7 +660,7 @@ export default function Home() {
             type="button"
             onClick={() => {
               setSelectedThread(thread.name);
-              setScreen("thread");
+              navigateTo("thread");
             }}
           >
             <span className="thread-avatar">{thread.avatar}</span>
@@ -302,10 +687,10 @@ export default function Home() {
           <button
             className="back-button"
             type="button"
-            onClick={() => setScreen("messages")}
+            onClick={goBack}
             aria-label="메시지 목록으로 돌아가기"
           >
-            ‹
+            <UiIcon name="back" size={24} />
           </button>
           <span className="thread-avatar small">
             {selectedThread.slice(0, 1)}
@@ -352,7 +737,7 @@ export default function Home() {
                   className="locked-inline"
                   onClick={() => openUnlock("messages")}
                 >
-                  🔒 삭제된 메시지 2개
+                  <UiIcon name="lock" size={15} /> 삭제된 메시지 2개
                 </button>
               )}
             </>
@@ -385,9 +770,13 @@ export default function Home() {
           )}
         </div>
         <div className="message-composer">
-          <span>메시지</span>
-          <button type="button" aria-label="전송">
-            ↑
+          <span>오프라인 · 메시지를 보낼 수 없음</span>
+          <button
+            type="button"
+            aria-label="전송"
+            onClick={() => setToast("통신 서비스에 연결할 수 없습니다")}
+          >
+            <UiIcon name="send" size={18} />
           </button>
         </div>
       </section>
@@ -398,116 +787,201 @@ export default function Home() {
     <section className="app-surface phone-app">
       {renderHeader("전화")}
       <div className="phone-tabs">
-        <button type="button" className="active">
+        <button
+          type="button"
+          className={phoneTab === "keypad" ? "active" : ""}
+          onClick={() => setPhoneTab("keypad")}
+        >
           키패드
         </button>
-        <button type="button">최근기록</button>
-        <button type="button">연락처</button>
-      </div>
-      <div className="dial-display">
-        <strong>{dial || "번호 입력"}</strong>
-        {dial ? <small>게임 속 전화번호만 입력하세요</small> : null}
-      </div>
-      <div className="keypad">
-        {[
-          ["1", ""],
-          ["2", "ABC"],
-          ["3", "DEF"],
-          ["4", "GHI"],
-          ["5", "JKL"],
-          ["6", "MNO"],
-          ["7", "PQRS"],
-          ["8", "TUV"],
-          ["9", "WXYZ"],
-          ["*", ""],
-          ["0", "+"],
-          ["#", ""],
-        ].map(([number, letters]) => (
-          <button
-            type="button"
-            key={number}
-            onClick={() => setDial((current) => `${current}${number}`)}
-          >
-            <b>{number}</b>
-            <small>{letters}</small>
-          </button>
-        ))}
-      </div>
-      <div className="dial-actions">
-        <span />
         <button
           type="button"
-          className="call-button"
-          onClick={startCall}
-          aria-label="전화 걸기"
+          className={phoneTab === "recent" ? "active" : ""}
+          onClick={() => setPhoneTab("recent")}
         >
-          ☎
+          최근기록
         </button>
         <button
           type="button"
-          className="erase-button"
-          onClick={() => setDial((current) => current.slice(0, -1))}
-          aria-label="한 글자 지우기"
+          className={phoneTab === "contacts" ? "active" : ""}
+          onClick={() => setPhoneTab("contacts")}
         >
-          ⌫
+          연락처
         </button>
       </div>
-      <div className="prototype-hint">
-        프로토타입 번호: 010-4821-0416
-      </div>
+      {phoneTab === "keypad" ? (
+        <>
+          <div className="dial-display">
+            <strong>{dial || "번호 입력"}</strong>
+            {dial ? <small>번호를 확인한 뒤 통화 버튼을 누르세요</small> : null}
+          </div>
+          <div className="keypad">
+            {[
+              ["1", ""], ["2", "ABC"], ["3", "DEF"], ["4", "GHI"],
+              ["5", "JKL"], ["6", "MNO"], ["7", "PQRS"], ["8", "TUV"],
+              ["9", "WXYZ"], ["*", ""], ["0", "+"], ["#", ""],
+            ].map(([number, letters]) => (
+              <button
+                type="button"
+                key={number}
+                onClick={() => setDial((current) => `${current}${number}`)}
+              >
+                <b>{number}</b>
+                <small>{letters}</small>
+              </button>
+            ))}
+          </div>
+          <div className="dial-actions">
+            <span />
+            <button type="button" className="call-button" onClick={startCall} aria-label="전화 걸기">
+              <AppGlyph name="phone" />
+            </button>
+            <button
+              type="button"
+              className="erase-button"
+              onClick={() => setDial((current) => current.slice(0, -1))}
+              aria-label="한 글자 지우기"
+            >
+              <UiIcon name="backspace" size={22} />
+            </button>
+          </div>
+        </>
+      ) : phoneTab === "recent" ? (
+        <div className="phone-list">
+          {[
+            ["윤서아", "수신 전화", "23:41", "010-4821-0416"],
+            ["박재민", "발신 전화", "22:58", "010-9031-1024"],
+            ["엄마", "부재중 전화", "21:07", "010-3497-1108"],
+          ].map(([name, type, time, number]) => (
+            <button
+              type="button"
+              key={`${name}-${time}`}
+              onClick={() => {
+                setDial(number);
+                setPhoneTab("keypad");
+              }}
+            >
+              <span className={type === "부재중 전화" ? "missed" : ""}>
+                <strong>{name}</strong>
+                <small>{type}</small>
+              </span>
+              <time>{time}</time>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="phone-list">
+          {[
+            ["박재민", "010-9031-1024"],
+            ["서유리", "010-7174-0907"],
+            ["윤서아", "010-4821-0416"],
+            ["학생회실", "052-204-0312"],
+          ].map(([name, number]) => (
+            <button
+              type="button"
+              key={name}
+              onClick={() => {
+                setDial(number);
+                setPhoneTab("keypad");
+              }}
+            >
+              <span><strong>{name}</strong><small>{number}</small></span>
+              <b><UiIcon name="phone" size={19} /></b>
+            </button>
+          ))}
+        </div>
+      )}
     </section>
   );
 
   const renderGallery = () => (
-    <section className="app-surface gallery-app">
-      {renderHeader("갤러리", "최근 항목")}
-      <div className="gallery-feature">
-        <img src="/assets/student-council.png" alt="학생회 단체사진" />
-        <div>
-          <strong>학생회</strong>
-          <span>9월 27일 · 사진 12장</span>
+    <section className="app-surface gallery-app oneui-gallery">
+      <header className="gallery-header">
+        <button
+          className="back-button"
+          type="button"
+          onClick={goBack}
+          aria-label="이전 화면으로 돌아가기"
+        >
+          <UiIcon name="back" size={24} />
+        </button>
+        <h1>갤러리</h1>
+        <div className="gallery-header-actions">
+          <button
+            type="button"
+            aria-label="사진 검색"
+            onClick={() => setToast("검색할 수 없는 오프라인 사진입니다")}
+          >
+            <UiIcon name="search" size={21} />
+          </button>
+          <button
+            type="button"
+            aria-label="갤러리 메뉴"
+            onClick={() => setToast("표시할 추가 메뉴가 없습니다")}
+          >
+            <UiIcon name="more" size={21} />
+          </button>
         </div>
+      </header>
+
+      <div className="gallery-tabs" role="tablist" aria-label="갤러리 보기">
+        <button type="button" className="active" role="tab" aria-selected="true">
+          사진
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected="false"
+          onClick={() => setToast("앨범 보기는 잠겨 있습니다")}
+        >
+          앨범
+        </button>
       </div>
+
+      <div className="gallery-day">
+        <strong>최근 사진</strong>
+        <span>{visibleGalleryImages.length}개</span>
+      </div>
+
       <div className="gallery-grid">
-        <figure>
-          <img src="/assets/student-council.png" alt="학생회 단체사진" />
-          <figcaption>9월 27일 17:31</figcaption>
-        </figure>
-        <figure>
-          <img src="/assets/doyoon-seoa.png" alt="교실에서 함께 찍은 두 학생" />
-          <figcaption>8월 19일 18:42</figcaption>
-        </figure>
-        {unlocks.gallery ? (
-          <figure className="evidence-photo">
-            <img
-              src="/assets/rooftop-evidence.png"
-              alt="옥상에서 학생의 손목을 붙잡고 있는 강도윤"
-            />
-            <figcaption>10월 12일 · 숨김</figcaption>
-          </figure>
-        ) : (
+        {visibleGalleryImages.map((image) => (
+          <button
+            type="button"
+            className={image.hidden ? "gallery-tile evidence-photo" : "gallery-tile"}
+            key={image.id}
+            onClick={() => openGalleryImage(image.id)}
+            aria-label={`${image.title} 크게 보기`}
+          >
+            <img src={image.src} alt={image.alt} />
+            <span className="gallery-tile-shade" />
+            <span className="gallery-tile-copy">
+              <strong>{image.title}</strong>
+              <small>{image.date}</small>
+            </span>
+            {image.hidden ? (
+              <span className="gallery-hidden-mark">
+                <UiIcon name="lock" size={13} />
+              </span>
+            ) : null}
+          </button>
+        ))}
+
+        {!unlocks.gallery ? (
           <button
             type="button"
             className="locked-gallery"
             onClick={() => openUnlock("gallery")}
           >
-            <span>🔒</span>
+            <span><UiIcon name="lock" size={24} /></span>
             <strong>숨김 앨범</strong>
-            <small>사진 4장</small>
+            <small>암호 필요</small>
           </button>
-        )}
-        <figure className="placeholder-shot">
-          <div className="hallway-photo" />
-          <figcaption>10월 12일 22:19</figcaption>
-        </figure>
+        ) : null}
       </div>
-      {unlocks.gallery ? (
-        <article className="evidence-caption">
-          <span>숨김 앨범 · 사진 정보</span>
-          <strong>IMG_1012_1746.jpg</strong>
-          <p>위치: 해원고등학교 옥상 · 원본 촬영기기 미확인</p>
-        </article>
-      ) : null}
+
+      <p className="gallery-gesture-tip">
+        사진을 누르면 크게 열립니다. 두 번 누르거나 두 손가락으로 확대하세요.
+      </p>
     </section>
   );
 
@@ -527,16 +1001,16 @@ export default function Home() {
           className="file-row"
           onClick={() => (unlocks.file ? setToast("파일 정보를 열었습니다") : openUnlock("file"))}
         >
-          <span className="file-icon video">▶</span>
+          <span className="file-icon video"><UiIcon name="video" size={20} /></span>
           <span>
             <strong>NARI_FINAL.mp4</strong>
             <small>{unlocks.file ? "복원된 동영상 · 84.2 MB" : "암호화됨"}</small>
           </span>
-          <b>{unlocks.file ? "열기" : "🔒"}</b>
+          <b>{unlocks.file ? "열기" : <UiIcon name="lock" size={17} />}</b>
         </button>
         {unlocks.file ? (
           <article className="file-preview">
-            <img src="/assets/rooftop-evidence.png" alt="복구 영상 미리보기" />
+            <img src="assets/rooftop-evidence.png" alt="복구 영상 미리보기" />
             <div>
               <strong>23:55 수신 완료</strong>
               <p>보낸 사람: 박재민</p>
@@ -553,12 +1027,12 @@ export default function Home() {
               : openUnlock("device")
           }
         >
-          <span className="file-icon link">⌁</span>
+          <span className="file-icon link"><UiIcon name="wifi" size={19} /></span>
           <span>
             <strong>주변기기 연결기록</strong>
             <small>{unlocks.device ? "10월 12일 · 23:59" : "접근 제한됨"}</small>
           </span>
-          <b>{unlocks.device ? "열기" : "🔒"}</b>
+          <b>{unlocks.device ? "열기" : <UiIcon name="lock" size={17} />}</b>
         </button>
         {unlocks.device ? (
           <article className="connection-record">
@@ -585,7 +1059,7 @@ export default function Home() {
       <div className="record-list">
         <article>
           <button type="button" className="play-mini" onClick={() => speak("학생회 정기 회의는 다음 주 월요일로 변경합니다.")}>
-            ▶
+            <UiIcon name="play" size={18} />
           </button>
           <div>
             <strong>학생회 회의</strong>
@@ -600,7 +1074,7 @@ export default function Home() {
               className={`play-mini ${voicePlaying ? "playing" : ""}`}
               onClick={playLockedVoice}
             >
-              {voicePlaying ? "Ⅱ" : "▶"}
+              {voicePlaying ? "Ⅱ" : <UiIcon name="play" size={18} />}
             </button>
           ) : (
             <button
@@ -608,7 +1082,7 @@ export default function Home() {
               className="play-mini"
               onClick={() => openUnlock("voice")}
             >
-              🔒
+              <UiIcon name="lock" size={17} />
             </button>
           )}
           <div>
@@ -627,7 +1101,12 @@ export default function Home() {
           </div>
         ) : null}
       </div>
-      <button type="button" className="record-button" aria-label="새 녹음">
+      <button
+        type="button"
+        className="record-button"
+        aria-label="새 녹음"
+        onClick={() => setToast("새 녹음을 시작할 수 없습니다")}
+      >
         <span />
       </button>
     </section>
@@ -653,7 +1132,12 @@ export default function Home() {
           <p>영상이 정말 남아 있는지 확인해야 한다.</p>
         </article>
       </div>
-      <button type="button" className="floating-add" aria-label="새 메모">
+      <button
+        type="button"
+        className="floating-add"
+        aria-label="새 메모"
+        onClick={() => setToast("새 메모를 작성할 수 없습니다")}
+      >
         ＋
       </button>
     </section>
@@ -701,10 +1185,10 @@ export default function Home() {
     <section className="app-surface contacts-app">
       {renderHeader("연락처", "87명")}
       <div className="contact-owner">
-        <span>?</span>
+        <span>강</span>
         <div>
-          <strong>내 프로필</strong>
-          <small>이름 정보가 손상되었습니다</small>
+          <strong>강도윤</strong>
+          <small>내 프로필 · 월백고등학교</small>
         </div>
       </div>
       <div className="contact-list">
@@ -719,7 +1203,8 @@ export default function Home() {
             key={name}
             onClick={() => {
               setDial(number);
-              setScreen("phone");
+              setPhoneTab("keypad");
+              navigateTo("phone");
             }}
           >
             <span>{name.slice(0, 1)}</span>
@@ -727,7 +1212,7 @@ export default function Home() {
               <strong>{name}</strong>
               <small>{number}</small>
             </div>
-            <b>☎</b>
+            <b><UiIcon name="phone" size={19} /></b>
           </button>
         ))}
       </div>
@@ -738,17 +1223,17 @@ export default function Home() {
     <section className="app-surface settings-app">
       {renderHeader("설정")}
       <div className="settings-owner">
-        <span>?</span>
+        <span>강</span>
         <div>
-          <strong>사용자 정보 손상됨</strong>
-          <p>기기 이름: KD-01</p>
+          <strong>강도윤</strong>
+          <p>기기 이름: 도윤의 Galaxy</p>
         </div>
       </div>
       <div className="settings-list">
         <div>
-          <span className="setting-icon wifi">⌁</span>
+          <span className="setting-icon wifi"><UiIcon name="wifi" size={18} /></span>
           <strong>Wi-Fi</strong>
-          <small>HWA_2-4</small>
+          <small>WOLBAEK_2-4</small>
         </div>
         <div>
           <span className="setting-icon bluetooth">ᛒ</span>
@@ -760,16 +1245,64 @@ export default function Home() {
           <strong>배터리</strong>
           <small>47%</small>
         </div>
-        <button
-          type="button"
-          className="reset-prototype"
-          onClick={() => {
-            persistUnlocks(initialUnlocks);
-            setToast("프로토타입 잠금 상태를 초기화했습니다");
-          }}
-        >
-          모든 잠금 다시 설정
+        <button type="button" className="setting-action" onClick={restoreFullscreen}>
+          <span className="setting-icon fullscreen">⛶</span>
+          <strong>전체 화면 다시 켜기</strong>
+          <small>게임 화면 유지</small>
         </button>
+      </div>
+    </section>
+  );
+
+  const renderGuide = () => (
+    <section className="app-surface guide-app">
+      {renderHeader("게임 안내", "언제든 다시 확인할 수 있습니다")}
+      <article className="identity-card">
+        <span>내 캐릭터</span>
+        <div>
+          <b>강</b>
+          <p>
+            <strong>강도윤</strong>
+            <small>남성 · 월백고등학교 2학년 4반 · 학생회</small>
+          </p>
+        </div>
+        <p>
+          자신의 이름과 기본 신원은 기억합니다. 사건 당시의 행동과 감춰진
+          관계는 휴대전화 기록과 단서카드를 통해 확인하세요.
+        </p>
+      </article>
+      <div className="guide-section">
+        <h2>휴대전화 사용법</h2>
+        <ol>
+          <li>홈 화면의 앱과 기록은 자유롭게 확인할 수 있습니다.</li>
+          <li>잠긴 항목은 실물 단서카드에서 얻은 암호로만 해제합니다.</li>
+          <li>다른 캐릭터의 휴대전화를 대신 조작하거나 엿보지 않습니다.</li>
+          <li>하단 뒤로가기는 이전 앱 화면으로만 이동하며 게임에서 나가지 않습니다.</li>
+        </ol>
+      </div>
+      <div className="guide-section">
+        <h2>6라운드 조사</h2>
+        <p>각 라운드에는 모든 사람이 단서 카드 한 장을 가져간 뒤 함께 논의합니다.</p>
+        <div className="round-list">
+          <span><b>1</b>강도윤 → 박재민 → 서유리 → 최현우</span>
+          <span><b>2</b>박재민 → 서유리 → 최현우 → 강도윤</span>
+          <span><b>3</b>서유리 → 최현우 → 강도윤 → 박재민</span>
+          <span><b>4</b>최현우 → 강도윤 → 박재민 → 서유리</span>
+          <span><b>5</b>강도윤 → 박재민 → 서유리 → 최현우</span>
+          <span><b>6</b>박재민 → 서유리 → 최현우 → 강도윤</span>
+        </div>
+        <p className="guide-note">
+          라운드는 말로 함께 확인합니다. 이 휴대전화가 다른 사람의 진행을
+          통제하지 않습니다.
+        </p>
+      </div>
+      <div className="guide-section">
+        <h2>정보 공개와 거짓말</h2>
+        <p>
+          휴대전화에서 확인한 내용을 말로 공유할 수 있지만, 화면 자체를 다른
+          사람에게 보여주지는 않습니다. 자신의 비밀을 숨기거나 거짓말할 수
+          있으나 게임 규칙과 카드에 적힌 사실을 바꿀 수는 없습니다.
+        </p>
       </div>
     </section>
   );
@@ -777,16 +1310,33 @@ export default function Home() {
   const renderScreen = () => {
     if (screen === "lock") {
       return (
-        <section className="lock-screen">
+        <section
+          className="lock-screen"
+          onTouchStart={(event) => {
+            swipeStartY.current = event.touches[0]?.clientY ?? null;
+          }}
+          onTouchEnd={(event) => {
+            const startY = swipeStartY.current;
+            const endY = event.changedTouches[0]?.clientY;
+            swipeStartY.current = null;
+            if (
+              typeof startY === "number" &&
+              typeof endY === "number" &&
+              startY - endY > 48
+            ) {
+              unlockPhone();
+            }
+          }}
+        >
           <div className="lock-shade" />
           <div className="lock-top">
-            <span className="lock-icon">⌾</span>
+            <span className="lock-icon"><UiIcon name="lock" size={19} /></span>
             <h1>23:47</h1>
             <p>10월 12일 토요일</p>
           </div>
           <div className="notification-stack">
             <article>
-              <span className="notif-icon message">💬</span>
+              <span className="notif-icon message"><AppGlyph name="messages" /></span>
               <div>
                 <b>윤서아</b>
                 <p>오늘 밤 2학년 4반에서 끝내자.</p>
@@ -794,7 +1344,7 @@ export default function Home() {
               <time>방금</time>
             </article>
             <article>
-              <span className="notif-icon calendar">12</span>
+              <span className="notif-icon calendar"><AppGlyph name="calendar" /></span>
               <div>
                 <b>캘린더</b>
                 <p>23:40 · 서아 만나기</p>
@@ -805,16 +1355,25 @@ export default function Home() {
           <button
             type="button"
             className="unlock-phone"
-            onClick={() => {
-              setScreen("home");
-              vibrate([15, 25, 15]);
-            }}
+            onClick={unlockPhone}
           >
             위로 밀어 휴대전화 열기
           </button>
           <div className="lock-shortcuts">
-            <span>◉</span>
-            <span>⌁</span>
+            <button
+              type="button"
+              aria-label="카메라"
+              onClick={() => setToast("잠금 상태에서는 카메라를 사용할 수 없습니다")}
+            >
+              <UiIcon name="camera" size={20} />
+            </button>
+            <button
+              type="button"
+              aria-label="손전등"
+              onClick={() => setToast("손전등을 켤 수 없습니다")}
+            >
+              <UiIcon name="flash" size={19} />
+            </button>
           </div>
         </section>
       );
@@ -836,16 +1395,17 @@ export default function Home() {
                 className="app-button"
                 onClick={() => openApp(app.id)}
               >
-                <span
-                  className={`app-icon app-${app.id}`}
-                  style={{ backgroundColor: app.color }}
-                >
-                  {app.icon}
+                <span className={`app-icon app-${app.id}`}>
+                  <AppGlyph name={app.icon as AppGlyphName} />
                   {"badge" in app && app.badge ? <b>{app.badge}</b> : null}
                 </span>
                 <small>{app.label}</small>
               </button>
             ))}
+          </div>
+          <div className="home-page-dots" aria-hidden="true">
+            <i />
+            <i className="active" />
           </div>
           <div className="home-dock">
             {apps.slice(0, 4).map((app) => (
@@ -856,11 +1416,8 @@ export default function Home() {
                 onClick={() => openApp(app.id)}
                 aria-label={app.label}
               >
-                <span
-                  className={`app-icon app-${app.id}`}
-                  style={{ backgroundColor: app.color }}
-                >
-                  {app.icon}
+                <span className={`app-icon app-${app.id}`}>
+                  <AppGlyph name={app.icon as AppGlyphName} />
                 </span>
               </button>
             ))}
@@ -878,29 +1435,34 @@ export default function Home() {
     if (screen === "notes") return renderNotes();
     if (screen === "calendar") return renderCalendar();
     if (screen === "contacts") return renderContacts();
+    if (screen === "guide") return renderGuide();
     return renderSettings();
   };
 
-  return (
-    <main className="prototype-stage">
-      <div className="ambient ambient-one" />
-      <div className="ambient ambient-two" />
-      <section className="prototype-copy">
-        <span>CHARACTER PHONE · PROTOTYPE 01</span>
-        <h1>강도윤의 휴대전화</h1>
-        <p>
-          화면 속 기록을 직접 열어 보세요. 잠긴 자료는 실물 단서카드의
-          암호로 해제됩니다.
-        </p>
-        <div className="prototype-keys">
-          <span>숨김 앨범 1012</span>
-          <span>삭제된 대화 2357</span>
-          <span>음성메모 0416</span>
-          <span>동영상 NARI</span>
-          <span>기기기록 0004</span>
-        </div>
-      </section>
+  if (!entered) {
+    return (
+      <main className="immersive-entry">
+        <div className="entry-noise" />
+        <section>
+          <span className="entry-device">GALAXY · 강도윤</span>
+          <div className="entry-avatar">강</div>
+          <h1>강도윤의 휴대전화</h1>
+          <p>
+            이 화면을 켜면 게임이 끝날 때까지 당신의 휴대전화는 강도윤의
+            기기로 작동합니다.
+          </p>
+          <button type="button" onClick={enterPhone}>휴대전화 켜기</button>
+          <small>
+            전체 화면과 화면 꺼짐 방지를 사용합니다. 하단 뒤로가기는 앱
+            내부에서만 작동합니다.
+          </small>
+        </section>
+      </main>
+    );
+  }
 
+  return (
+    <main className="phone-stage">
       <div className="phone-shell">
         <div className="phone-bezel">
           <div className="camera-island">
@@ -908,11 +1470,16 @@ export default function Home() {
             <span />
           </div>
           <div className="phone-screen">
-            <div className="status-bar">
+            <div
+              className={`status-bar ${
+                screen === "lock" || screen === "home" ? "" : "dark"
+              }`}
+            >
               <b>{statusTime}</b>
-              <div>
-                <span>▥</span>
-                <span>⌁</span>
+              <div className="status-indicators" aria-label="LTE 신호, 와이파이, 배터리 47%">
+                <span className="status-lte">LTE</span>
+                <UiIcon name="signal" size={15} />
+                <UiIcon name="wifi" size={15} />
                 <span className="battery-meter">
                   <i />
                 </span>
@@ -933,7 +1500,7 @@ export default function Home() {
               submitUnlock();
             }}
           >
-            <span className="modal-lock">🔒</span>
+            <span className="modal-lock"><UiIcon name="lock" size={22} /></span>
             <h2>{unlockConfig[unlockTarget].title}</h2>
             <p>{unlockConfig[unlockTarget].hint}</p>
             <input
@@ -979,15 +1546,15 @@ export default function Home() {
             )}
             <div className="call-options">
               <button type="button">
-                <span>🔇</span>
+                <span><UiIcon name="mute" size={21} /></span>
                 음소거
               </button>
               <button type="button">
-                <span>▦</span>
+                <span><UiIcon name="keypad" size={22} /></span>
                 키패드
               </button>
               <button type="button">
-                <span>🔊</span>
+                <span><UiIcon name="speaker" size={23} /></span>
                 스피커
               </button>
             </div>
@@ -997,9 +1564,169 @@ export default function Home() {
               onClick={endCall}
               aria-label="통화 종료"
             >
-              ☎
+              <UiIcon name="hangup" size={30} />
             </button>
           </div>
+        </div>
+      ) : null}
+
+      {selectedImage ? (
+        <div
+          className="image-viewer"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${selectedImage.title} 사진 보기`}
+        >
+          <header className="viewer-topbar">
+            <button type="button" onClick={closeGalleryImage} aria-label="사진 닫기">
+              <UiIcon name="back" size={24} />
+            </button>
+            <div>
+              <strong>{selectedImage.date}</strong>
+              <span>{selectedImage.location}</span>
+            </div>
+            <button
+              type="button"
+              aria-label="사진 메뉴"
+              onClick={() => setToast("표시할 추가 메뉴가 없습니다")}
+            >
+              <UiIcon name="more" size={22} />
+            </button>
+          </header>
+
+          <div
+            className={`viewer-canvas ${viewerScale > 1 ? "zoomed" : ""}`}
+            onTouchStart={handleViewerTouchStart}
+            onTouchMove={handleViewerTouchMove}
+            onTouchEnd={handleViewerTouchEnd}
+            onWheel={handleViewerWheel}
+            onDoubleClick={() => setViewerZoom(viewerScale > 1 ? 1 : 2.5)}
+          >
+            <button
+              type="button"
+              className="viewer-step previous"
+              aria-label="이전 사진"
+              disabled={selectedImagePosition <= 0}
+              onClick={() => stepGalleryImage(-1)}
+            >
+              <UiIcon name="chevronLeft" size={28} />
+            </button>
+            <img
+              src={selectedImage.src}
+              alt={selectedImage.alt}
+              draggable={false}
+              style={{
+                transform: `translate3d(${viewerPan.x}px, ${viewerPan.y}px, 0) scale(${viewerScale})`,
+              }}
+            />
+            <button
+              type="button"
+              className="viewer-step next"
+              aria-label="다음 사진"
+              disabled={selectedImagePosition >= visibleGalleryImages.length - 1}
+              onClick={() => stepGalleryImage(1)}
+            >
+              <UiIcon name="chevronRight" size={28} />
+            </button>
+          </div>
+
+          <div className="viewer-zoom">
+            <button
+              type="button"
+              aria-label="축소"
+              disabled={viewerScale <= 1}
+              onClick={() => setViewerZoom(viewerScale - 0.5)}
+            >
+              <UiIcon name="zoomOut" size={19} />
+            </button>
+            <span>{Math.round(viewerScale * 100)}%</span>
+            <button
+              type="button"
+              aria-label="확대"
+              disabled={viewerScale >= 4}
+              onClick={() => setViewerZoom(viewerScale + 0.5)}
+            >
+              <UiIcon name="zoomIn" size={19} />
+            </button>
+          </div>
+
+          <div className="viewer-thumbnails" aria-label="사진 목록">
+            {visibleGalleryImages.map((image, index) => (
+              <button
+                type="button"
+                key={`viewer-${image.id}`}
+                className={image.id === selectedImage.id ? "active" : ""}
+                onClick={() => openGalleryImage(image.id)}
+                aria-label={`${image.title} 보기`}
+              >
+                <img src={image.src} alt="" />
+                <span>{index + 1}</span>
+              </button>
+            ))}
+          </div>
+
+          <footer className="viewer-toolbar">
+            <button
+              type="button"
+              onClick={() => setToast("게임 중에는 사진을 공유할 수 없습니다")}
+            >
+              <UiIcon name="share" size={21} />
+              <span>공유</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setToast("즐겨찾기에 추가할 수 없습니다")}
+            >
+              <UiIcon name="heart" size={21} />
+              <span>즐겨찾기</span>
+            </button>
+            <button
+              type="button"
+              className={viewerDetails ? "active" : ""}
+              onClick={() => setViewerDetails((current) => !current)}
+            >
+              <UiIcon name="info" size={21} />
+              <span>상세정보</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setToast("원본 기록은 편집할 수 없습니다")}
+            >
+              <UiIcon name="edit" size={21} />
+              <span>편집</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setToast("사건 기록은 삭제할 수 없습니다")}
+            >
+              <UiIcon name="trash" size={21} />
+              <span>삭제</span>
+            </button>
+          </footer>
+
+          {viewerDetails ? (
+            <aside className="viewer-details" aria-label="사진 상세정보">
+              <div className="viewer-details-handle" />
+              <header>
+                <div>
+                  <strong>상세정보</strong>
+                  <span>{selectedImage.file}</span>
+                </div>
+                <button
+                  type="button"
+                  aria-label="상세정보 닫기"
+                  onClick={() => setViewerDetails(false)}
+                >
+                  <UiIcon name="close" size={20} />
+                </button>
+              </header>
+              <dl>
+                <div><dt>촬영 시각</dt><dd>{selectedImage.date}</dd></div>
+                <div><dt>위치</dt><dd>{selectedImage.location}</dd></div>
+                <div><dt>파일 정보</dt><dd>{selectedImage.meta}</dd></div>
+              </dl>
+            </aside>
+          ) : null}
         </div>
       ) : null}
 
