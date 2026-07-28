@@ -1,108 +1,57 @@
-# vinext-starter
+# 강도윤의 휴대전화
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+머더미스터리 플레이 중 참가자의 실제 휴대전화를 강도윤의 휴대전화처럼
+사용하는 모바일 웹앱입니다.
 
-## Prerequisites
+## 완성 기능
 
-- Node.js `>=22.13.0`
-- Linux with `flock`, `curl`, and GNU `timeout`
+- 모바일 전체 화면 및 세로 화면 요청
+- 화면 꺼짐 방지와 앱 재진입 시 자동 재요청
+- 갤럭시 시스템 뒤로가기의 사이트 이탈 방지
+- 잠금화면 위로 밀기와 앱 내부 이전 화면 이동
+- 메시지, 전화, 최근기록, 연락처, 갤러리, 파일, 녹음, 메모, 캘린더
+- 갤러리 사진 전체 화면 보기, 좌우 넘기기, 확대·축소, 이동, 상세정보 확인
+- 실물 단서카드 암호를 이용한 잠금 해제
+- 게임 안내와 6라운드 조사 순서
+- 설치형 웹앱(PWA)과 오프라인 재접속
+- 모바일 안전영역과 다양한 화면 크기 대응
 
-## Sites Lifecycle
+## GitHub Pages에 올리는 방법
 
-The Sites lifecycle CLI runs the locked dependency install before returning this checkout. Edit the source under `app/`, then checkpoint when a coherent milestone is ready to inspect or share. The remote Sites builder runs `npm run build` against the pushed commit. Do not repeat install or build as a normal pre-checkpoint step.
+1. 이 폴더의 파일을 모두 GitHub 저장소의 최상위에 업로드합니다.
+2. 저장소의 `Settings → Pages`를 엽니다.
+3. `Source`를 `GitHub Actions`로 선택합니다.
+4. `main` 브랜치에 파일이 올라가면 배포가 자동으로 시작됩니다.
+5. 저장소의 `Actions` 탭에서 `Deploy GitHub Pages`가 완료되면 공개 주소로
+   접속합니다.
 
-This starter does not use `wrangler.jsonc`.
+GitHub Pages가 프로젝트 하위 주소
+(`https://아이디.github.io/저장소이름/`)를 사용해도 이미지, 설치, 오프라인
+기능이 정상 작동하도록 구성되어 있습니다.
 
-`install:ci` is intentionally a single, non-retrying `npm ci`. It refuses a concurrent install for the same project, consumes a matching image-seeded npm cache with `--prefer-offline` while retaining registry fallback for a missing cache object, otherwise downloads and verifies the complete vinext tarball recorded in `package-lock.json`, limits npm to one socket, and terminates a stalled install. `build` applies a short timeout and then validates the Sites artifact. These helpers target Linux and use GNU `timeout`; they are not native macOS scripts.
+## PC에서 완성본 바로 확인
 
-Scripts that need writable project-scoped home, npm, XDG, and temporary paths use `scripts/sites-env.sh`. The `dev` and `start` scripts honor the caller's runtime environment and keep Wrangler logs inside the checkout. The generated `.sites-runtime/` directory is disposable and ignored by Git.
+Windows에서는 `RUN_LOCAL_WINDOWS.bat`을 실행합니다. 별도 설치 없이
+PowerShell의 로컬 서버가 열리고 브라우저에서 완성본을 확인할 수 있습니다.
+종료할 때는 열린 명령 창에서 `Ctrl+C`를 누릅니다.
 
-## Included Shape
+## 개발 및 다시 빌드
 
-- edit site code under `app/`
-- `app/chatgpt-auth.ts` provides optional dispatch-owned ChatGPT sign-in helpers
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/index.ts` reads the D1 binding from the Cloudflare Worker environment
-- `db/schema.ts` starts intentionally empty
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
+Node.js 22 이상에서 다음 명령을 사용합니다.
 
-## Workspace Auth Headers
-
-OpenAI workspace sites can read the current user's email from
-`oai-authenticated-user-email`.
-
-SIWC-authenticated workspace sites may also receive
-`oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty
-`name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by
-`oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
-
-Treat the full name as optional and fall back to email when it is absent:
-
-```tsx
-import { headers } from "next/headers";
-
-export default async function Home() {
-  const requestHeaders = await headers();
-  const email = requestHeaders.get("oai-authenticated-user-email");
-  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? decodeURIComponent(encodedFullName)
-      : null;
-
-  const displayName = fullName ?? email;
-  // ...
-}
+```bash
+npm install
+npm run build:github
 ```
 
-## Optional Dispatch-Owned ChatGPT Sign-In
+GitHub Pages용 완성 파일은 `docs` 폴더에 생성됩니다.
 
-Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs
-optional or required ChatGPT sign-in:
+## 플레이 권장 방식
 
-- Use `getChatGPTUser()` for optional signed-in UI.
-- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send
-  anonymous visitors through Sign in with ChatGPT.
-- Use `chatGPTSignInPath(returnTo)` and `chatGPTSignOutPath(returnTo)` for
-  browser links or actions.
-- Pass a same-origin relative `returnTo` path for the destination after sign-in
-  or sign-out. The helper validates and safely encodes it.
-- Mark protected pages with `export const dynamic = "force-dynamic"` because
-  they depend on per-request identity headers.
-
-Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the
-OAuth cookies, and identity header injection. Do not implement app routes for
-those reserved paths. Routes that do not import and call the helper remain
-anonymous-compatible.
-
-SIWC establishes identity only; it does not prove workspace membership. Use the
-Sites hosting platform's access policy controls for workspace-wide restrictions,
-or enforce explicit server-side membership or allowlist checks.
-
-Use SIWC for account pages, user-specific dashboards, saved records, and write
-actions tied to the current ChatGPT user. Leave public content anonymous.
-
-## Diagnostic Commands
-
-- `npm run install:ci`: perform the one bounded lockfile install
-- `npm run dev`: start the Vite/Vinext development server
-- `npm run build`: build and validate the deployable Sites artifact
-- `npm run start`: start the built Vinext application
-- `npm test`: build, validate, and verify the rendered development-preview metadata
-- `npm run validate:artifact`: recheck an existing artifact's manifest and ESM `default.fetch` export
-- `npm run db:generate`: generate Drizzle migrations after schema changes
-
-Use build and validation commands for targeted diagnosis after a remote failure, not as part of the normal checkpoint path.
-
-The timeout defaults can be overridden for a controlled canary with `SITES_INSTALL_TIMEOUT`, `SITES_INSTALL_KILL_AFTER`, `SITES_BUILD_TIMEOUT`, and `SITES_BUILD_KILL_AFTER`. A timeout fails the command; the helpers never retry an unchanged install or build.
-
-## Learn More
-
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+- Android Chrome 또는 Samsung Internet에서 링크를 엽니다.
+- `휴대전화 켜기`를 누르고 전체 화면 요청을 허용합니다.
+- 가장 안정적인 몰입형 실행을 위해 브라우저 메뉴에서 `홈 화면에 추가`한 뒤
+  설치된 아이콘으로 실행합니다.
+- 브라우저 정책상 기기의 홈 버튼과 시스템 제스처 영역 자체는 웹페이지가
+  제거할 수 없습니다. 대신 뒤로가기로 사이트가 닫히지 않도록 앱 내부에서
+  처리합니다.
