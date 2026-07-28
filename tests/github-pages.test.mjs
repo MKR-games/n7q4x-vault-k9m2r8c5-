@@ -54,6 +54,9 @@ test("built app keeps character identity and removes obsolete school name", asyn
   assert.match(script, /읽기 전용/);
   assert.match(script, /doyoon-guide-font-size/);
   assert.match(script, /글자 크기/);
+  assert.match(script, /이야기의 배경/);
+  assert.match(script, /두 달 전, 월백고등학교 옥상/);
+  assert.match(script, /nari-final-evidence\.mp4/);
   assert.match(script, /app-icon-shell/);
   assert.match(script, /app-badge/);
   assert.match(script, /010-0000-7182/);
@@ -75,4 +78,8 @@ test("built app keeps character identity and removes obsolete school name", asyn
   assert.match(styles, /\.app-icon-shell\{[^}]*overflow:visible/);
   assert.match(styles, /\.app-icon\{[^}]*overflow:hidden/);
   assert.doesNotMatch(script, /"\/assets\//);
+  assert.ok(
+    (await stat(path.join(docsRoot, "assets", "nari-final-evidence.mp4"))).size >
+      100000,
+  );
 });
