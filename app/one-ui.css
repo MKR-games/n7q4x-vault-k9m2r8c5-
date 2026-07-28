@@ -144,21 +144,26 @@ button {
   gap: 7px;
 }
 
-.app-icon {
+.app-icon-shell {
   width: 55px;
   height: 55px;
+  transition:
+    transform 0.14s ease,
+    filter 0.14s ease;
+}
+
+.app-icon {
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   border-radius: 17px;
   background: #fff;
   box-shadow:
     inset 0 0 0 0.7px rgba(255, 255, 255, 0.42),
     0 4px 10px rgba(0, 0, 0, 0.18);
-  transition:
-    transform 0.14s ease,
-    filter 0.14s ease;
 }
 
-.app-button:active .app-icon {
+.app-button:active .app-icon-shell {
   transform: scale(0.88);
   filter: brightness(0.92);
 }
@@ -215,7 +220,7 @@ button {
   background: linear-gradient(145deg, #aeb4be, #7c8491);
 }
 
-.app-icon > b {
+.app-badge {
   top: -5px;
   right: -5px;
   min-width: 19px;
@@ -270,7 +275,7 @@ button {
   backdrop-filter: blur(28px) saturate(1.32);
 }
 
-.home-dock .app-icon {
+.home-dock .app-icon-shell {
   width: 53px;
   height: 53px;
 }
@@ -1084,7 +1089,7 @@ button {
     padding-top: 19px;
   }
 
-  .app-icon {
+  .app-icon-shell {
     width: 49px;
     height: 49px;
     border-radius: 15px;
@@ -1100,7 +1105,7 @@ button {
     padding-bottom: 9px;
   }
 
-  .home-dock .app-icon {
+  .home-dock .app-icon-shell {
     width: 49px;
     height: 49px;
   }

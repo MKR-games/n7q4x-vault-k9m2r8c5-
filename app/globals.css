@@ -484,10 +484,17 @@ button {
   cursor: pointer;
 }
 
-.app-icon {
+.app-icon-shell {
   position: relative;
   width: 54px;
   height: 54px;
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.app-icon {
+  width: 100%;
+  height: 100%;
   border-radius: 15px;
   display: grid;
   place-items: center;
@@ -499,12 +506,13 @@ button {
     0 6px 16px rgba(0, 0, 0, 0.18);
 }
 
-.app-button:active .app-icon {
+.app-button:active .app-icon-shell {
   transform: scale(0.92);
 }
 
-.app-icon b {
+.app-badge {
   position: absolute;
+  z-index: 3;
   top: -6px;
   right: -6px;
   min-width: 20px;
@@ -517,6 +525,10 @@ button {
   color: white;
   background: #ec3549;
   font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  pointer-events: none;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.24);
 }
 
 .app-button small {
@@ -559,7 +571,7 @@ button {
   backdrop-filter: blur(24px) saturate(1.25);
 }
 
-.home-dock .app-icon {
+.home-dock .app-icon-shell {
   width: 52px;
   height: 52px;
 }
@@ -2150,7 +2162,7 @@ button {
     gap: 14px 10px;
   }
 
-  .app-icon {
+  .app-icon-shell {
     width: 48px;
     height: 48px;
   }

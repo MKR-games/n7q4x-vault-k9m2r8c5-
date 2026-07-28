@@ -58,30 +58,41 @@ const unlockConfig: Record<
 > = {
   gallery: {
     title: "숨김 앨범",
-    hint: "그날을 잊지 않기 위해 저장한 네 자리 숫자",
+    hint: "실물 단서카드에서 확인한 네 자리 암호",
     answer: "1012",
   },
   messages: {
     title: "삭제된 대화",
-    hint: "교실 시계가 멈춘 시각",
+    hint: "실물 단서카드에서 확인한 네 자리 암호",
     answer: "2357",
   },
   voice: {
     title: "잠긴 음성메모",
-    hint: "서아의 생일",
+    hint: "실물 단서카드에서 확인한 네 자리 암호",
     answer: "0416",
   },
   file: {
     title: "암호화된 동영상",
-    hint: "파일을 복구한 사람이 붙인 영문 암호",
+    hint: "실물 단서카드에서 확인한 대문자 영문 암호",
     answer: "NARI",
   },
   device: {
     title: "주변기기 연결기록",
-    hint: "사건이 발생한 교실",
+    hint: "실물 단서카드에서 확인한 네 자리 암호",
     answer: "0004",
   },
 };
+
+const phoneNumbers = {
+  archive: "010-0000-2357",
+  council: "010-0000-2040",
+  doyoon: "010-0000-6431",
+  hyunwoo: "010-0000-9346",
+  jaemin: "010-0000-8725",
+  mother: "010-0000-1108",
+  seoa: "010-0000-7182",
+  yuri: "010-0000-6158",
+} as const;
 
 const apps = [
   { id: "messages", label: "메시지", icon: "messages" },
@@ -114,9 +125,9 @@ const galleryImages: GalleryImage[] = [
     src: "assets/student-council.png",
     alt: "학생회 단체사진",
     title: "학생회 단체사진",
-    date: "9월 27일 오후 5:31",
+    date: "9월 30일 오후 5:31",
     location: "월백고등학교 학생회실",
-    file: "IMG_0927_1731.jpg",
+    file: "IMG_0930_1731.jpg",
     meta: "3024 × 4032 · 3.8 MB",
   },
   {
@@ -134,9 +145,9 @@ const galleryImages: GalleryImage[] = [
     src: "assets/rooftop-evidence.png",
     alt: "옥상에서 학생의 손목을 붙잡고 있는 강도윤",
     title: "숨김 앨범",
-    date: "10월 12일 오후 5:46",
+    date: "8월 · 날짜 정보 손상 · 오후 5:46",
     location: "월백고등학교 옥상 · 촬영기기 미확인",
-    file: "IMG_1012_1746.jpg",
+    file: "IMG_08XX_1746.jpg",
     meta: "1920 × 1080 · 2.1 MB",
     hidden: true,
   },
@@ -145,22 +156,22 @@ const galleryImages: GalleryImage[] = [
 const threads = [
   {
     name: "윤서아",
-    preview: "오늘 밤 2학년 4반에서 끝내자.",
-    time: "23:42",
+    preview: "11시 40분. 늦지 마.",
+    time: "21:51",
     unread: 2,
     avatar: "윤",
   },
   {
     name: "엄마",
-    preview: "도윤아, 오늘도 학교에 늦게까지 있니?",
-    time: "21:08",
+    preview: "너무 늦지 마. 비 많이 온대.",
+    time: "21:16",
     unread: 1,
     avatar: "엄",
   },
   {
     name: "학생회",
-    preview: "내일 아침 회의는 취소됐습니다.",
-    time: "18:31",
+    preview: "확인했습니다.",
+    time: "18:33",
     unread: 0,
     avatar: "학",
   },
@@ -306,6 +317,7 @@ export default function Home() {
   const [toast, setToast] = useState("");
   const [dial, setDial] = useState("");
   const [call, setCall] = useState<{
+    mode: "recording" | "voicemail" | "unavailable";
     phase: "calling" | "connected";
     title: string;
     number: string;
@@ -558,7 +570,7 @@ export default function Home() {
     }
   };
 
-  const statusTime = useMemo(() => (screen === "lock" ? "23:47" : "23:48"), [screen]);
+  const statusTime = useMemo(() => (screen === "lock" ? "00:04" : "00:05"), [screen]);
   const unreadMessageCount = useMemo(
     () =>
       Object.values(activity.unreadMessages).reduce(
@@ -774,26 +786,29 @@ export default function Home() {
 
   const startCall = () => {
     const normalized = dial.replace(/\D/g, "");
-    const seoANumber = "01048210416";
-    const schoolNumber = "0522042357";
+    const seoANumber = phoneNumbers.seoa.replace(/\D/g, "");
+    const archiveNumber = phoneNumbers.archive.replace(/\D/g, "");
     if (normalized === seoANumber) {
       setCall({
+        mode: "recording",
         phase: "calling",
         title: "윤서아",
-        number: "010-4821-0416",
+        number: phoneNumbers.seoa,
         transcript:
-          "원본 영상 봤지? 열한 시 사십 분까지 교실로 와. 오늘 네 입으로 전부 말하게 할 거야.",
+          "어디야? 지금 2학년 4반으로 와. 오늘 네 입으로 전부 말하게 할 거야.",
       });
-    } else if (normalized === schoolNumber) {
+    } else if (normalized === archiveNumber) {
       setCall({
+        mode: "voicemail",
         phase: "calling",
-        title: "월백고 음성보관함",
-        number: "052-204-2357",
+        title: "사건 음성보관함",
+        number: phoneNumbers.archive,
         transcript:
           "보관된 메시지입니다. 도윤아, 네가 약속만 지키면 영상은 공개하지 않을게. 오늘이 마지막이야.",
       });
     } else {
       setCall({
+        mode: "unavailable",
         phase: "calling",
         title: "알 수 없음",
         number: dial || "번호 없음",
@@ -1070,9 +1085,9 @@ export default function Home() {
       ) : phoneTab === "recent" ? (
         <div className="phone-list">
           {[
-            ["윤서아", "수신 전화", "23:41", "010-4821-0416"],
-            ["박재민", "발신 전화", "22:58", "010-9031-1024"],
-            ["엄마", "부재중 전화", "21:07", "010-3497-1108"],
+            ["윤서아", "수신 전화", "23:41", phoneNumbers.seoa],
+            ["박재민", "발신 전화", "22:58", phoneNumbers.jaemin],
+            ["엄마", "부재중 전화", "21:07", phoneNumbers.mother],
           ].map(([name, type, time, number]) => (
             <button
               type="button"
@@ -1093,10 +1108,11 @@ export default function Home() {
       ) : (
         <div className="phone-list">
           {[
-            ["박재민", "010-9031-1024"],
-            ["서유리", "010-7174-0907"],
-            ["윤서아", "010-4821-0416"],
-            ["학생회실", "052-204-0312"],
+            ["박재민", phoneNumbers.jaemin],
+            ["서유리", phoneNumbers.yuri],
+            ["윤서아", phoneNumbers.seoa],
+            ["최현우", phoneNumbers.hyunwoo],
+            ["학생회실", phoneNumbers.council],
           ].map(([name, number]) => (
             <button
               type="button"
@@ -1224,7 +1240,7 @@ export default function Home() {
         >
           <span className="file-icon video"><UiIcon name="video" size={20} /></span>
           <span>
-            <strong>NARI_FINAL.mp4</strong>
+            <strong>{unlocks.file ? "NARI_FINAL.mp4" : "ENC_VIDEO_1013.bin"}</strong>
             <small>{unlocks.file ? "복원된 동영상 · 84.2 MB" : "암호화됨"}</small>
           </span>
           <b>{unlocks.file ? "열기" : <UiIcon name="lock" size={17} />}</b>
@@ -1419,8 +1435,8 @@ export default function Home() {
         <article>
           <time>23:57</time>
           <div className="event blue">
-            <strong>차단기 확인</strong>
-            <span>본관 3층 복도</span>
+            <strong>차단기 확인이라고 말하기</strong>
+            <span>개인 메모 · 알리바이용</span>
           </div>
         </article>
       </div>
@@ -1434,15 +1450,16 @@ export default function Home() {
         <span>강</span>
         <div>
           <strong>강도윤</strong>
-          <small>내 프로필 · 월백고등학교</small>
+          <small>내 프로필 · {phoneNumbers.doyoon} · 월백고등학교</small>
         </div>
       </div>
       <div className="contact-list">
         {[
-          ["박재민", "010-9031-1024"],
-          ["서유리", "010-7174-0907"],
-          ["윤서아", "010-4821-0416"],
-          ["학생회실", "052-204-0312"],
+          ["박재민", phoneNumbers.jaemin],
+          ["서유리", phoneNumbers.yuri],
+          ["윤서아", phoneNumbers.seoa],
+          ["최현우", phoneNumbers.hyunwoo],
+          ["학생회실", phoneNumbers.council],
         ].map(([name, number]) => (
           <button
             type="button"
@@ -1472,7 +1489,7 @@ export default function Home() {
         <span>강</span>
         <div>
           <strong>강도윤</strong>
-          <p>기기 이름: 도윤의 Galaxy</p>
+          <p>{phoneNumbers.doyoon} · 기기 이름: 도윤의 Galaxy</p>
         </div>
       </div>
       <div className="settings-list">
@@ -1600,8 +1617,8 @@ export default function Home() {
           <div className="lock-shade" />
           <div className="lock-top">
             <span className="lock-icon"><UiIcon name="lock" size={19} /></span>
-            <h1>23:47</h1>
-            <p>10월 12일 토요일</p>
+            <h1>00:04</h1>
+            <p>10월 13일 일요일</p>
           </div>
           <div className="notification-stack">
             {latestUnreadThread ? (
@@ -1627,10 +1644,10 @@ export default function Home() {
             <article>
               <span className="notif-icon calendar"><AppGlyph name="calendar" /></span>
               <div>
-                <b>캘린더</b>
+                <b>지난 일정</b>
                 <p>23:40 · 서아 만나기</p>
               </div>
-              <time>예정</time>
+              <time>지남</time>
             </article>
           </div>
           <button
@@ -1665,8 +1682,8 @@ export default function Home() {
         <section className="home-screen">
           <div className="home-shade" />
           <div className="home-date">
-            <strong>23:48</strong>
-            <span>10월 12일 토요일 · 흐림 16°</span>
+            <strong>00:05</strong>
+            <span>10월 13일 일요일 · 흐림 16°</span>
           </div>
           <div className="app-grid">
             {apps.map((app) => {
@@ -1678,9 +1695,18 @@ export default function Home() {
                 className="app-button"
                 onClick={() => openApp(app.id)}
               >
-                <span className={`app-icon app-${app.id}`}>
-                  <AppGlyph name={app.icon as AppGlyphName} />
-                  {badge > 0 ? <b>{badge}</b> : null}
+                <span className="app-icon-shell">
+                  <span className={`app-icon app-${app.id}`}>
+                    <AppGlyph name={app.icon as AppGlyphName} />
+                  </span>
+                  {badge > 0 ? (
+                    <b
+                      className="app-badge"
+                      aria-label={`읽지 않음 ${badge}개`}
+                    >
+                      {badge}
+                    </b>
+                  ) : null}
                 </span>
                 <small>{app.label}</small>
               </button>
@@ -1702,9 +1728,18 @@ export default function Home() {
                 onClick={() => openApp(app.id)}
                 aria-label={app.label}
               >
-                <span className={`app-icon app-${app.id}`}>
-                  <AppGlyph name={app.icon as AppGlyphName} />
-                  {badge > 0 ? <b>{badge}</b> : null}
+                <span className="app-icon-shell">
+                  <span className={`app-icon app-${app.id}`}>
+                    <AppGlyph name={app.icon as AppGlyphName} />
+                  </span>
+                  {badge > 0 ? (
+                    <b
+                      className="app-badge"
+                      aria-label={`읽지 않음 ${badge}개`}
+                    >
+                      {badge}
+                    </b>
+                  ) : null}
                 </span>
               </button>
               );
@@ -1833,7 +1868,17 @@ export default function Home() {
         <div className="call-screen">
           <div className="call-backdrop" />
           <div className="call-content">
-            <span>{call.phase === "calling" ? "전화 거는 중…" : "통화 연결됨"}</span>
+            <span>
+              {call.phase === "calling"
+                ? call.mode === "unavailable"
+                  ? "전화 거는 중…"
+                  : "기록 확인 중…"
+                : call.mode === "recording"
+                  ? "저장된 통화 기록"
+                  : call.mode === "voicemail"
+                    ? "음성보관함 재생"
+                    : "연결 실패"}
+            </span>
             <h2>{call.title}</h2>
             <p>{call.number}</p>
             {call.phase === "connected" ? (
